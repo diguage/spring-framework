@@ -108,6 +108,7 @@ public interface TransactionDefinition {
 	 * will be suspended and resumed appropriately.
 	 * @see org.springframework.transaction.jta.JtaTransactionManager#setTransactionManager
 	 */
+	// TODO 如何挂起事务？
 	int PROPAGATION_NOT_SUPPORTED = 4;
 
 	/**
