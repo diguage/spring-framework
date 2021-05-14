@@ -349,6 +349,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 
 		if (isExistingTransaction(transaction)) {
 			// Existing transaction found -> check propagation behavior to find out how to behave.
+			// 当前线程存在事务，分情况进行处理
 			return handleExistingTransaction(def, transaction, debugEnabled);
 		}
 
@@ -397,6 +398,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 		boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
 		DefaultTransactionStatus status = newTransactionStatus(
 				definition, transaction, true, newSynchronization, debugEnabled, suspendedResources);
+		// 新事务的建立，事务开启的核心
 		doBegin(transaction, definition);
 		prepareSynchronization(status, definition);
 		return status;
@@ -409,21 +411,27 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			TransactionDefinition definition, Object transaction, boolean debugEnabled)
 			throws TransactionException {
 
+		// 在配置中配置设定为 PROPAGATION_NEVER，表示该方法需要在非事务的环境下运行，
+		// 但处于事务处理的状态（可能是外部带事务的方法调用了非事务的方法），将会抛出异常
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NEVER) {
 			throw new IllegalTransactionStateException(
 					"Existing transaction found for transaction marked with propagation 'never'");
 		}
 
+		// 在配置中配置设定为 PROPAGATION_NOT_SUPPORTED，则如果有事务存在，将事务挂起，而不是抛出异常
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NOT_SUPPORTED) {
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction");
 			}
+			// 挂起事务
 			Object suspendedResources = suspend(transaction);
 			boolean newSynchronization = (getTransactionSynchronization() == SYNCHRONIZATION_ALWAYS);
 			return prepareTransactionStatus(
 					definition, null, false, newSynchronization, debugEnabled, suspendedResources);
 		}
 
+		// 在配置中配置设定为 PROPAGATION_REQUIRES_NEW，则表示当前方法必须在它自己的事务里运行，
+		// 一个新的事务将被启动，而如果有一个事务正在运行的话，则这个方法运行期间被挂起。
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW) {
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction, creating new transaction with name [" +
@@ -439,6 +447,8 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			}
 		}
 
+		// 在配置中配置设定为 PROPAGATION_NESTED，则表示如果当前正有一个事务在运行中，则该方法应该运行在一个嵌套的事务中，
+		// 被嵌套的事务可以独立于封装事务进行提交或者回滚，如果封装事务不存在，行为就像 PROPAGATION_REQUIRES_NEW。
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
 			if (!isNestedTransactionAllowed()) {
 				throw new NestedTransactionNotSupportedException(
@@ -448,12 +458,16 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			if (debugEnabled) {
 				logger.debug("Creating nested transaction with name [" + definition.getName() + "]");
 			}
+			// 嵌入式事务的处理
 			if (useSavepointForNestedTransaction()) {
 				// Create savepoint within existing Spring-managed transaction,
 				// through the SavepointManager API implemented by TransactionStatus.
 				// Usually uses JDBC 3.0 savepoints. Never activates Spring synchronization.
 				DefaultTransactionStatus status =
 						prepareTransactionStatus(definition, transaction, false, false, debugEnabled, null);
+				// 创建 savepoint
+				// savepoint，可以利用保存点回滚部分事务，从而使事务处理更加灵活和精细。
+				// 创建保存点调用的方法是 java.sql.Connection.setSavepoint(java.lang.String)
 				status.createAndHoldSavepoint();
 				return status;
 			}
@@ -547,6 +561,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 	 * @see #setDefaultTimeout
 	 */
 	protected int determineTimeout(TransactionDefinition definition) {
+		// 如果设置事务超时时间，则返回设置的超时时间，否则使用默认超时时间。
 		if (definition.getTimeout() != TransactionDefinition.TIMEOUT_DEFAULT) {
 			return definition.getTimeout();
 		}
@@ -564,6 +579,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 	 * @see #doSuspend
 	 * @see #resume
 	 */
+	// TODO 如何挂起事务？
 	@Nullable
 	protected final SuspendedResourcesHolder suspend(@Nullable Object transaction) throws TransactionException {
 		if (TransactionSynchronizationManager.isSynchronizationActive()) {
