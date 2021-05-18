@@ -1,0 +1,90 @@
+@startuml
+title **<b>BeanFactory 继承体系</b>**
+
+interface BeanDefinitionRegistry extends AliasRegistry
+
+class SimpleAliasRegistry implements AliasRegistry {
+	- Map<String, String> aliasMap
+}
+
+class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
+  - Map<String, Object> singletonObjects
+  - Map<String, ObjectFactory<?>> singletonFactories
+  - Map<String, Object> earlySingletonObjects
+  - Set<String> registeredSingletons
+  - Set<String> singletonsCurrentlyInCreation
+  - Set<String> inCreationCheckExclusions
+  - Set<Exception> suppressedExceptions
+  - boolean singletonsCurrentlyInDestruction = false
+  - Map<String, Object> disposableBeans
+  - Map<String, Set<String>> containedBeanMap
+  - Map<String, Set<String>> dependentBeanMap
+  - Map<String, Set<String>> dependenciesForBeanMap
+}
+
+abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanRegistry {
+  - Map<String, Object> factoryBeanObjectCache
+}
+
+interface ListableBeanFactory extends BeanFactory
+
+interface HierarchicalBeanFactory extends BeanFactory
+
+interface ConfigurableBeanFactory extends HierarchicalBeanFactory, SingletonBeanRegistry
+
+interface AutowireCapableBeanFactory extends BeanFactory
+
+interface ConfigurableListableBeanFactory extends ListableBeanFactory, AutowireCapableBeanFactory, ConfigurableBeanFactory
+
+abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport implements ConfigurableBeanFactory {
+  - BeanFactory parentBeanFactory
+  - ClassLoader beanClassLoader
+  - ClassLoader tempClassLoader
+  - BeanExpressionResolver beanExpressionResolver
+  - ConversionService conversionService
+  - Set<PropertyEditorRegistrar> propertyEditorRegistrars
+  - Map<Class<?>, Class<? extends PropertyEditor>> customEditors
+  - TypeConverter typeConverter
+  - List<StringValueResolver> embeddedValueResolvers
+  - List<BeanPostProcessor> beanPostProcessors
+  - BeanPostProcessorCache beanPostProcessorCache
+  - Map<String, Scope> scopes
+  - Map<String, RootBeanDefinition> mergedBeanDefinitions
+  - Set<String> alreadyCreated
+  - ThreadLocal<Object> prototypesCurrentlyInCreation
+}
+
+abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFactory implements AutowireCapableBeanFactory {
+  - InstantiationStrategy instantiationStrategy
+  - ParameterNameDiscoverer parameterNameDiscoverer
+  - boolean allowCircularReferences = true
+  - boolean allowRawInjectionDespiteWrapping = false
+  - Set<Class<?>> ignoredDependencyTypes
+  - Set<Class<?>> ignoredDependencyInterfaces
+  - NamedThreadLocal<String> currentlyCreatedBean
+  - ConcurrentMap<String, BeanWrapper> factoryBeanInstanceCache
+  - ConcurrentMap<Class<?>, Method[]> factoryMethodCandidateCache
+  - ConcurrentMap<Class<?>, PropertyDescriptor[]> filteredPropertyDescriptorsCache
+}
+
+class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFactory implements ConfigurableListableBeanFactory, BeanDefinitionRegistry {
+  - {static} Map<String, Reference<DefaultListableBeanFactory>> serializableFactories
+  - boolean allowBeanDefinitionOverriding = true
+  - boolean allowEagerClassLoading = true
+  - Comparator<Object> dependencyComparator
+  - AutowireCandidateResolver autowireCandidateResolver
+  - Map<Class<?>, Object> resolvableDependencies
+  - Map<String, BeanDefinition> beanDefinitionMap
+  - Map<String, BeanDefinitionHolder> mergedBeanDefinitionHolders
+  - Map<Class<?>, String[]> allBeanNamesByType
+  - Map<Class<?>, String[]> singletonBeanNamesByType
+  - List<String> beanDefinitionNames
+  - Set<String> manualSingletonNames
+  - String[] frozenBeanDefinitionNames
+  - boolean configurationFrozen
+}
+
+skinparam footerFontSize 20
+footer ''地瓜哥''博客网 · https://www.diguage.com · 出品
+
+@enduml
