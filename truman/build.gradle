@@ -1,0 +1,126 @@
+plugins {
+    id 'war'
+    id 'org.gretty' version '3.0.4'
+    id 'org.asciidoctor.jvm.convert'
+    id 'org.asciidoctor.jvm.pdf'
+}
+
+dependencies {
+    compile(project(":spring-context"))
+    compile(project(":spring-jdbc"))
+    compile(project(":spring-webmvc"))
+
+    compile(project(":spring-test"))
+
+    compile("javax.annotation:javax.annotation-api")
+    compile("org.aspectj:aspectjweaver")
+
+    compile group: 'com.zaxxer', name: 'HikariCP', version: '4.0.3'
+    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.23'
+    compile group: 'org.mybatis', name: 'mybatis', version: '3.5.6'
+    compile group: 'org.mybatis', name: 'mybatis-spring', version: '2.0.6'
+
+    providedCompile("javax.servlet:javax.servlet-api:4.0.1")
+
+    compile("org.slf4j:slf4j-api")
+    compile("org.apache.logging.log4j:log4j-slf4j-impl")
+    compile("org.apache.logging.log4j:log4j-1.2-api")
+    compile("org.apache.logging.log4j:log4j-jcl")
+    compile("org.apache.logging.log4j:log4j-jul")
+    compile("org.apache.logging.log4j:log4j-core")
+
+    compile("org.junit.platform:junit-platform-launcher")
+    compile("org.junit.jupiter:junit-jupiter-engine")
+}
+
+sourceSets {
+    main {
+        java {
+//            exclude 'com/diguage/truman/**'
+            exclude 'org/**'
+        }
+    }
+}
+
+test {
+    // make sure the classes dir is used on the test classpath (required by ResourceTests)
+    // When test fixtures are involved, the JAR is used by default
+    classpath = sourceSets.main.output.classesDirs + classpath - files(jar.archiveFile)
+}
+
+asciidoctorj {
+    version = '2.5.1'
+    fatalWarnings ".*"
+//    outputDir "$buildDir/docs/html"
+    options doctype: 'book', eruby: 'erubis'
+    attributes([
+            icons: 'font',
+            idprefix: '',
+            idseparator: '-',
+            docinfo: 'shared',
+            revnumber: project.version,
+            sectanchors: '',
+            sectnums: '',
+            'source-highlighter': 'rouge',
+            'rouge-linenums-mode': 'table',
+            'rouge-style': 'monokai',
+            'linkcss': 'true',
+            toc: 'left',
+            toclevels: 4,
+            sectnums: false,
+            sectnumlevels: 3,
+            sectanchors: true,
+            fontsDir: 'cfg/fonts',
+            graphvizdot: '/usr/local/bin/dot',
+            stylesdir: 'css',
+            'spring-version': project.version
+    ])
+    modules {
+        pdf {
+            version '1.6.0'
+        }
+        epub {
+            version '1.5.1'
+        }
+        diagram {
+            version '2.1.2'
+        }
+    }
+}
+
+// TODO open the task, and run `./gradlew :truman:asciidoctor` will throw an error.
+//asciidoctor {
+//    baseDirIsProjectDir()
+//    sourceDir  file('docs')
+//    sources {
+//        include '*.adoc'
+//    }
+//	outputDir "$buildDir/docs/html5"
+////    outputDir  file('build/docs/html5')
+//    logDocuments = true
+//    resources {
+//        from(sourceDir) {
+//            include 'images/*.png', 'css/**', 'js/**'
+//        }
+////		from extractDocResources
+//    }
+//    into 'build/docs/html5/assets'
+//}
+
+// TODO add the pdfThemes config, run Gradle task will throw an error.
+//pdfThemes {
+//    local 'Source', {
+//        styleDir = file('cfg/theme')
+//        styleName = 'Source'
+//    }
+//}
+//
+//asciidoctorPdf {
+//    baseDirFollowsSourceDir()
+////	configurations 'asciidoctorExt'
+//    sources {
+//        include '*.adoc'
+//    }
+//    outputDir "$buildDir/docs/ref-docs/pdf"
+//    logDocuments = true
+//}
