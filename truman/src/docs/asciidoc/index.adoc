@@ -1,0 +1,102 @@
+= Spring 源码分析
+
+== 资源加载
+
+`ResourceLoader` 也是一种策略模式，加载资源的策略。
+
+[plantuml, Resource-classes, format=svg,align="center",width=100%]
+....
+@startuml
+title <b>Resource 与 ResourceLoader</b>
+
+interface InputStreamSource {
+	+InputStream getInputStream()
+}
+
+interface Resource extends InputStreamSource
+
+interface ResourceLoader {
+	+{static} String CLASSPATH_URL_PREFIX = "classpath:"
+
+	+Resource getResource(String location)
+	+ClassLoader getClassLoader()
+}
+
+note left of ResourceLoader : 加载单个 Resource
+
+class DefaultResourceLoader implements ResourceLoader
+class FileSystemResourceLoader extends DefaultResourceLoader
+
+interface ResourcePatternResolver extends ResourceLoader {
+	+{static} CLASSPATH_ALL_URL_PREFIX = "classpath*:"
+
+	+Resource[] getResources(String locationPattern)
+}
+
+class PathMatchingResourcePatternResolver implements ResourcePatternResolver
+
+note right of ResourcePatternResolver : 可以批量加载\nResource
+
+ResourceLoader *- Resource
+@enduml
+....
+
+`classpath*:` 与 `classpath:` 的唯一区别就在于，如果能够在 classpath 中找到多个指定的资源，则返回多个。
+
+
+`ApplicationContext` 继承了 `ResourcePatternResolver`，当 然就间接实现了 `ResourceLoader` 接口。所以，任何的 `ApplicationContext` 实现都可以看作是一个 `ResourceLoader` 甚至 `ResourcePatternResolver`。而这就是 `ApplicationContext` 支持 Spring 内统一资源加载策略的真相。
+
+[plantuml, ResourceLoader--classes, format=svg,align="center",width=100%]
+....
+@startuml
+title <b>ResourceLoader 与 ApplicationContext</b>
+
+interface ResourceLoader
+
+note right of ResourceLoader : 加载单个 Resource
+
+class DefaultResourceLoader implements ResourceLoader
+
+interface ResourcePatternResolver extends ResourceLoader
+
+class PathMatchingResourcePatternResolver implements ResourcePatternResolver
+
+'note right of ResourcePatternResolver : 可以批量加载\nResource
+
+interface ApplicationContext extends ResourcePatternResolver
+interface ConfigurableApplicationContext extends ApplicationContext
+abstract class AbstractApplicationContext implements ConfigurableApplicationContext
+
+abstract class AbstractApplicationContext extends DefaultResourceLoader
+
+AbstractApplicationContext --> PathMatchingResourcePatternResolver : has a >
+
+@enduml
+....
+
+`AbstractApplicationContext` 继承了 `DefaultResourceLoader`，那么，它的 `getResource(String)` 当然就直接用 `DefaultResourceLoader` 的了。
+
+`AbstractApplicationContext` 类的内 部声明有一个 `resourcePatternResolver`，类型是 `ResourcePatternResolver`，对应的实例类型为 `PathMatchingResourcePatternResolver`。
+
+`ApplicationContext` 的实现类在作为 `ResourceLoader` 或者 `ResourcePatternResolver` 时候的行为，完全就是委派给了 `PathMatchingResourcePatternResolver` 和 `DefaultResourceLoader` 来做。
+
+== 第一节
+
+这是一个 Spring 源码分析:
+
+=== Source Doc
+
+truman/src/docs/asciidoc/index.adoc
+
+This is a spring source analysis projects.
+
+== 第二节
+
+[source,java]
+----
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, D瓜哥！");
+    }
+}
+----
