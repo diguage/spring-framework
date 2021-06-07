@@ -1,0 +1,68 @@
+@startuml
+
+title **<b>BeanDefinition 继承体系</b>**
+
+
+abstract class AttributeAccessorSupport implements AttributeAccessor, Serializable {
+  - Map<String, Object> attributes
+}
+
+class BeanMetadataAttributeAccessor extends AttributeAccessorSupport implements BeanMetadataElement {
+  - Object source
+}
+
+interface BeanDefinition extends AttributeAccessor, BeanMetadataElement
+
+abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccessor implements BeanDefinition, Cloneable {
+  - Object beanClass
+  - boolean abstractFlag
+  - Boolean lazyInit
+  - int autowireMode = AUTOWIRE_NO
+  - int dependencyCheck = DEPENDENCY_CHECK_NONE
+  - String[] dependsOn
+  - boolean autowireCandidate = true
+  - boolean primary = false
+  - Map<String, AutowireCandidateQualifier> qualifiers
+  - Supplier<?> instanceSupplier
+  - boolean nonPublicAccessAllowed = true
+  - boolean lenientConstructorResolution = true
+  - String factoryBeanName
+  - String factoryMethodName
+  - ConstructorArgumentValues constructorArgumentValues
+  - MutablePropertyValues propertyValues
+  - MethodOverrides methodOverrides
+  - String initMethodName
+  - String destroyMethodName
+  - boolean enforceInitMethod = true
+  - boolean enforceDestroyMethod = true
+  - boolean synthetic = false
+  - int role = BeanDefinition.ROLE_APPLICATION
+  - String description
+  - Resource resource
+}
+
+class RootBeanDefinition extends AbstractBeanDefinition
+
+interface AnnotatedBeanDefinition extends BeanDefinition
+
+class ChildBeanDefinition extends AbstractBeanDefinition {
+  String parentName;
+}
+
+class GenericBeanDefinition extends AbstractBeanDefinition {
+  - String parentName
+}
+
+class ScannedGenericBeanDefinition extends GenericBeanDefinition implements AnnotatedBeanDefinition {
+  - AnnotationMetadata metadata
+}
+
+class AnnotatedGenericBeanDefinition extends GenericBeanDefinition implements AnnotatedBeanDefinition {
+  - AnnotationMetadata metadata
+  - MethodMetadata factoryMethodMetadata
+}
+
+skinparam footerFontSize 20
+footer ''地瓜哥''博客网 · https://www.diguage.com · 出品
+
+@enduml

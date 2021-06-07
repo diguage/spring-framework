@@ -1,0 +1,11 @@
+// this adds attributes to every preview being rendered in IntelliJ
+// for more information see:
+// https://intellij-asciidoc-plugin.ahus1.de/docs/users-guide/features/advanced/asciidoctorconfig-file.html
+
+//:pdf-fontsdir: {asciidoctorconfigdir}/../cfg/fonts
+//:pdf-stylesdir: {asciidoctorconfigdir}/../cfg/theme
+//:pdf-theme: Source
+
+:icons: font
+
+:includedir: .

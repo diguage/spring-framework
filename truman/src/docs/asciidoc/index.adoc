@@ -1,0 +1,322 @@
+= Spring 源码分析
+D瓜哥 <https://www.diguage.com>
+
+:image_attr: align="center",width=100%
+:diagram_attr: format=svg,{image_attr}
+
+:sourcedir: {includedir}/../../main/java/com/diguage/truman
+:source_attr: linenums,indent=0,subs="attributes,verbatim"
+:java_src_attr: source%nowrap,java,{source_attr}
+
+
+include::{includedir}/preface.adoc[leveloffset=+1]
+
+== 资源加载
+
+`ResourceLoader` 也是一种策略模式，加载资源的策略。
+
+[plantuml, format=svg,{image_attr}]
+....
+@startuml
+title <b>Resource 与 ResourceLoader</b>
+
+interface InputStreamSource {
+	+ getInputStream():InputStream
+}
+
+interface Resource extends InputStreamSource
+
+interface ResourceLoader {
+	+{static} String CLASSPATH_URL_PREFIX = "classpath:"
+
+	+ getResource(String location):Resource
+	+ getClassLoader():ClassLoader
+}
+
+note top of ResourceLoader : 加载单个 Resource
+
+class DefaultResourceLoader implements ResourceLoader
+class FileSystemResourceLoader extends DefaultResourceLoader
+
+interface ResourcePatternResolver extends ResourceLoader {
+	+{static} CLASSPATH_ALL_URL_PREFIX = "classpath*:"
+
+	+ getResources(String locationPattern):Resource[]
+}
+
+class PathMatchingResourcePatternResolver implements ResourcePatternResolver
+
+note top of ResourcePatternResolver : 可以批量加载\nResource
+
+ResourceLoader *- Resource
+@enduml
+....
+
+`classpath*:` 与 `classpath:` 的唯一区别就在于，如果能够在 classpath 中找到多个指定的资源，则返回多个。
+
+
+`ApplicationContext` 继承了 `ResourcePatternResolver`，当 然就间接实现了 `ResourceLoader` 接口。所以，任何的 `ApplicationContext` 实现都可以看作是一个 `ResourceLoader` 甚至 `ResourcePatternResolver`。而这就是 `ApplicationContext` 支持 Spring 内统一资源加载策略的真相。
+
+[plantuml, format=svg,{image_attr}]
+....
+@startuml
+title <b>ResourceLoader 与 ApplicationContext</b>
+
+interface ResourceLoader
+
+note right of ResourceLoader : 加载单个 Resource
+
+class DefaultResourceLoader implements ResourceLoader
+
+interface ResourcePatternResolver extends ResourceLoader
+
+class PathMatchingResourcePatternResolver implements ResourcePatternResolver
+
+'note right of ResourcePatternResolver : 可以批量加载\nResource
+
+interface ApplicationContext extends ResourcePatternResolver
+interface ConfigurableApplicationContext extends ApplicationContext
+abstract class AbstractApplicationContext implements ConfigurableApplicationContext
+
+abstract class AbstractApplicationContext extends DefaultResourceLoader {
+    - resourcePatternResolver:ResourcePatternResolver
+}
+
+AbstractApplicationContext *--> PathMatchingResourcePatternResolver : has a >
+
+@enduml
+....
+
+`AbstractApplicationContext` 继承了 `DefaultResourceLoader`，那么，它的 `getResource(String)` 当然就直接用 `DefaultResourceLoader` 的了。
+
+`AbstractApplicationContext` 类的内 部声明有一个 `resourcePatternResolver`，类型是 `ResourcePatternResolver`，对应的实例类型为 `PathMatchingResourcePatternResolver`。
+
+`ApplicationContext` 的实现类在作为 `ResourceLoader` 或者 `ResourcePatternResolver` 时候的行为，完全就是委派给了 `PathMatchingResourcePatternResolver` 和 `DefaultResourceLoader` 来做。
+
+== I18n
+
+properties 文件内容是以 ISO-8859-1 编码的。所以，不支持中文，需要把中文进行转码。
+
+[plantuml, format=svg,{image_attr}]
+....
+@startuml
+title <b>MessageSource类层次结构</b>
+
+interface HierarchicalMessageSource extends MessageSource
+
+interface ApplicationContext extends MessageSource
+
+interface ConfigurableApplicationContext extends ApplicationContext
+
+abstract class AbstractApplicationContext implements ConfigurableApplicationContext {
+    - messageSource:MessageSource
+}
+
+abstract class AbstractMessageSource implements HierarchicalMessageSource
+
+class StaticMessageSource extends AbstractMessageSource
+note bottom of StaticMessageSource : 多用于测试
+
+abstract class AbstractResourceBasedMessageSource extends AbstractMessageSource
+
+class ResourceBundleMessageSource extends AbstractResourceBasedMessageSource
+
+note bottom of ResourceBundleMessageSource : 常用
+
+class ReloadableResourceBundleMessageSource extends AbstractResourceBasedMessageSource implements ResourceLoaderAware
+
+class DelegatingMessageSource implements HierarchicalMessageSource
+
+note bottom of DelegatingMessageSource : Spring 内部使用该类，启动时\nAbstractApplicationContext\n.initMessageSource 注册该实例
+
+AbstractApplicationContext *--> DelegatingMessageSource : has a >
+
+@enduml
+....
+
+== 事件发布
+
+[plantuml, format=svg,{image_attr}]
+....
+@startuml
+title <b>Spring容器内事件发布实现类图</b>
+
+abstract class ApplicationEvent extends EventObject
+note top of EventObject : JDK内置事件类型
+note top of ApplicationEvent : Spring容器内\n自定义事件类型
+
+interface ApplicationListener<E extends ApplicationEvent> extends EventListener {
+    + onApplicationEvent(E event):void
+}
+
+interface ApplicationEventPublisher {
+    + publishEvent(ApplicationEvent event):void
+    + publishEvent(Object event):void
+}
+interface ApplicationContext extends ApplicationEventPublisher
+
+interface ConfigurableApplicationContext extends ApplicationContext
+
+abstract class AbstractApplicationContext implements ConfigurableApplicationContext {
+ - applicationEventMulticaster:ApplicationEventMulticaster
+}
+
+interface ApplicationEventMulticaster
+
+ApplicationEventMulticaster .right.> ApplicationListener : notify
+
+ApplicationEventMulticaster .up.> ApplicationEvent : publish
+
+ApplicationListener .up.> ApplicationEvent : receive
+
+abstract class AbstractApplicationEventMulticaster implements ApplicationEventMulticaster
+
+class SimpleApplicationEventMulticaster extends AbstractApplicationEventMulticaster {
+    - taskExecutor:Executor
+}
+
+AbstractApplicationContext *--> ApplicationEventMulticaster
+
+@enduml
+....
+
+容器启动伊始，就会检查容器内是否存在名称为 `applicationEventMulticaster` 的 `ApplicationEventMulticaster` 对象实例。有的话就使用提供的实现，没有则默认初始化一个 `SimpleApplicationEventMulticaster` 作为将会使用的 `ApplicationEventMulticaster`。
+
+在 `refresh()` 时，先调用 `initMessageSource()` 初始化 `MessageSource` 实例；然后调用 `initApplicationEventMulticaster()` 初始化 `ApplicationEventMulticaster`。
+
+== Ioc
+
+Spring 是如何解决构造函数依赖的呢？以及如何注入呢？
+
+plantuml::{includedir}/puml/BeanDefinition.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/BeanFactory.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/ConfigurationClassPostProcessor.puml[{diagram_attr}]
+
+
+
+== AOP
+
+[plantuml, format=svg,{image_attr}]
+....
+@startuml
+title <b>Pointcut族谱</b>
+
+abstract class DynamicMethodMatcher implements MethodMatcher
+abstract class StaticMethodMatcher implements MethodMatcher
+
+Pointcut *.up.> MethodMatcher
+
+abstract class StaticMethodMatcherPointcut extends StaticMethodMatcher implements Pointcut
+
+abstract class DynamicMethodMatcherPointcut extends DynamicMethodMatcher implements Pointcut
+
+
+class NameMatchMethodPointcut extends StaticMethodMatcherPointcut
+
+abstract class AbstractRegexpMethodPointcut extends StaticMethodMatcherPointcut
+
+class JdkRegexpMethodPointcut extends AbstractRegexpMethodPointcut
+
+@enduml
+....
+
+[{java_src_attr}]
+----
+include::{sourcedir}/aop/AopTest.java[]
+----
+
+[plantuml, format=svg,{image_attr}]
+....
+@startuml
+title <b>常见 Pointcut</b>
+
+interface Pointcut
+
+class NameMatchMethodPointcut
+
+class AnnotationMatchingPointcut
+
+NameMatchMethodPointcut .right.|> Pointcut
+
+AnnotationMatchingPointcut .left.|> Pointcut
+
+class ComposablePointcut implements Pointcut
+
+class JdkRegexpMethodPointcut implements Pointcut
+
+class ControlFlowPointcut implements Pointcut
+
+@enduml
+....
+
+`ComposablePointcut` 是 Spring AOP 提供可以进行 `Pointcut` 逻辑运算的 `Pointcut` 实现。
+
+`ControlFlowPointcut` 是在某个类调动时拦截，其他类调用时不调用。每次运行都需要做检查，性能差，慎重选择。
+
+plantuml::{includedir}/puml/AnnotationAwareAspectJAutoProxyCreator.puml[{diagram_attr}]
+
+感觉 `Advisor` 和 `Advice` 表示的意思是一样的。不一样的是 `Advisor` 是 Spring 自己创建的； `Advice` 是 AOP Alliance 定义的。两者的包不一样。
+
+`ReflectiveMethodInvocation.currentInterceptorIndex` 如果一个实例被多次调用，怎么来维护这个属性？每次调用方法，都会创建一个 `CglibMethodInvocation` 或者 `ReflectiveMethodInvocation`，这样每次 `currentInterceptorIndex` 属性都是从初始化开始的。
+
+使用 JDK 动态代理生成代理类时，如果多个接口，生成代理时，如何选择？没有被选中的接口怎么办？
+
+在 `expose-proxy = true` 使用 `((UserService) AopContext.currentProxy())` 代替 `this`，就可以获取代理类。
+
+多个 AOP 增强怎么处理？
+
+`SyntheticInstantiationAdvisor` 是干什么的？
+
+当 `BeanDefinition` 中有 `RuntimeBeanReference` 属性时，就会触发 `org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary`，从 `populateBean` → `applyPropertyValues` → `resolveValueIfNecessary`。
+
+跟踪代码发现， `RuntimeBeanReference` 类型的依赖关系最后会像 `dependsOn` 属性那样，注册到 `dependentBeanMap` 和 `dependenciesForBeanMap` 属性中。
+
+
+
+`com.alibaba.spring.beans.factory.annotation.EnableConfigurationBeanBindings` 这是什么鬼？干啥的？ -- 将基于proprieties 文件的配置项和对应的 Bean 建立起关联关系。
+
+
+这是什么？
+
+
+AOP 如何实现几种不同的通知的？怎么一步一步调用下去？怎么保存现场？
+
+Spring 中不同 Aspect 直接是如何排序的？如何实现在前置通知和后置通知在正确位置执行？
+
+== 事务
+
+`org.springframework.transaction.support.TransactionTemplate.execute` 中，排除 `RuntimeException | Error` 异常就回滚。那么，在 `@Transactional(rollbackFor = Throwable.class)` 中指定了回滚异常，怎么生效？
+
+TODO: 增加创建用户并授权的 SQL 语句。
+
+== 技巧
+
+=== 创建同步的 `Set` 实例
+
+[source,java]
+----
+Set<String> sets = Collections.newSetFromMap(new ConcurrentHashMap<>(256));
+----
+
+== 第一节
+
+这是一个 Spring 源码分析:
+
+=== Source Doc
+
+truman/src/docs/asciidoc/index.adoc
+
+This is a spring source analysis projects.
+
+== 第二节
+
+[source,java]
+----
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, D瓜哥！");
+    }
+}
+----
