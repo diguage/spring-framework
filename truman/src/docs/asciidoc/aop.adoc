@@ -1,0 +1,98 @@
+[#aop]
+= AOP
+include::{includedir}/_attributes.adoc[]
+
+[plantuml, format=svg,{image_attr}]
+....
+@startuml
+title <b>Pointcut族谱</b>
+
+abstract class DynamicMethodMatcher implements MethodMatcher
+abstract class StaticMethodMatcher implements MethodMatcher
+
+Pointcut *.up.> MethodMatcher
+
+abstract class StaticMethodMatcherPointcut extends StaticMethodMatcher implements Pointcut
+
+abstract class DynamicMethodMatcherPointcut extends DynamicMethodMatcher implements Pointcut
+
+
+class NameMatchMethodPointcut extends StaticMethodMatcherPointcut
+
+abstract class AbstractRegexpMethodPointcut extends StaticMethodMatcherPointcut
+
+class JdkRegexpMethodPointcut extends AbstractRegexpMethodPointcut
+
+@enduml
+....
+
+[{java_src_attr}]
+----
+include::{sourcedir}/aop/AopTest.java[]
+----
+
+[plantuml, format=svg,{image_attr}]
+....
+@startuml
+title <b>常见 Pointcut</b>
+
+interface Pointcut
+
+class NameMatchMethodPointcut
+
+class AnnotationMatchingPointcut
+
+NameMatchMethodPointcut .right.|> Pointcut
+
+AnnotationMatchingPointcut .left.|> Pointcut
+
+class ComposablePointcut implements Pointcut
+
+class JdkRegexpMethodPointcut implements Pointcut
+
+class ControlFlowPointcut implements Pointcut
+
+@enduml
+....
+
+`ComposablePointcut` 是 Spring AOP 提供可以进行 `Pointcut` 逻辑运算的 `Pointcut` 实现。
+
+`ControlFlowPointcut` 是在某个类调动时拦截，其他类调用时不调用。每次运行都需要做检查，性能差，慎重选择。
+
+plantuml::{includedir}/puml/AnnotationAwareAspectJAutoProxyCreator.puml[{diagram_attr}]
+
+感觉 `Advisor` 和 `Advice` 表示的意思是一样的。不一样的是 `Advisor` 是 Spring 自己创建的； `Advice` 是 AOP Alliance 定义的。两者的包不一样。
+
+`ReflectiveMethodInvocation.currentInterceptorIndex` 如果一个实例被多次调用，怎么来维护这个属性？每次调用方法，都会创建一个 `CglibMethodInvocation` 或者 `ReflectiveMethodInvocation`，这样每次 `currentInterceptorIndex` 属性都是从初始化开始的。
+
+使用 JDK 动态代理生成代理类时，如果多个接口，生成代理时，如何选择？没有被选中的接口怎么办？
+
+在 `expose-proxy = true` 使用 `((UserService) AopContext.currentProxy())` 代替 `this`，就可以获取代理类。
+
+多个 AOP 增强怎么处理？
+
+`SyntheticInstantiationAdvisor` 是干什么的？
+
+当 `BeanDefinition` 中有 `RuntimeBeanReference` 属性时，就会触发 `org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary`，从 `populateBean` → `applyPropertyValues` → `resolveValueIfNecessary`。
+
+跟踪代码发现， `RuntimeBeanReference` 类型的依赖关系最后会像 `dependsOn` 属性那样，注册到 `dependentBeanMap` 和 `dependenciesForBeanMap` 属性中。
+
+
+
+`com.alibaba.spring.beans.factory.annotation.EnableConfigurationBeanBindings` 这是什么鬼？干啥的？ -- 将基于proprieties 文件的配置项和对应的 Bean 建立起关联关系。
+
+
+这是什么？
+
+
+AOP 如何实现几种不同的通知的？怎么一步一步调用下去？怎么保存现场？
+
+Spring 中不同 Aspect 直接是如何排序的？如何实现在前置通知和后置通知在正确位置执行？
+
+include::{includedir}/template-method-pattern.adoc[leveloffset=+1]
+
+include::{includedir}/proxy-pattern.adoc[leveloffset=+1]
+
+include::{includedir}/dynamic-proxy.adoc[leveloffset=+1]
+
+include::{includedir}/aspectj-intro.adoc[leveloffset=+1]

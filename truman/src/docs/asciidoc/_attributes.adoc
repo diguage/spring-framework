@@ -1,0 +1,3 @@
+D瓜哥 <https://www.diguage.com>
+
+:sourcedir: {includedir}/../../main/java/com/diguage/truman

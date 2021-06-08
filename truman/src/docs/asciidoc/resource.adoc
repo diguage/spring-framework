@@ -1,0 +1,6 @@
+[#resource]
+= Resource
+
+`Resource` 类图
+
+plantuml::{includedir}/puml/org.springframework.core.io.Resource.puml[{diagram_attr}]
