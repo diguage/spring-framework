@@ -249,7 +249,6 @@ public class AnnotatedBeanDefinitionReader {
 	private <T> void doRegisterBean(Class<T> beanClass, @Nullable String name,
 			@Nullable Class<? extends Annotation>[] qualifiers, @Nullable Supplier<T> supplier,
 			@Nullable BeanDefinitionCustomizer[] customizers) {
-
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
