@@ -76,6 +76,11 @@ public abstract class PropertyResourceConfigurer extends PropertiesLoaderSupport
 	 */
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		System.out.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		try {
 			Properties mergedProps = mergeProperties();
 

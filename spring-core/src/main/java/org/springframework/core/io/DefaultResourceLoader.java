@@ -140,6 +140,14 @@ public class DefaultResourceLoader implements ResourceLoader {
 	}
 
 
+	/**
+	 * (1) 首先检查资源路径是否以classpath:前缀打头，如果是，则尝试构造ClassPathResource类 型资源并返回。<br/>
+	 * (2) 否则，<br/>
+	 *  　(a) 尝试通过URL，根据资源路径来定位资源，如果没有抛出MalformedURLException， 有则会构造UrlResource
+	 *   类型的资源并返回;<br/>
+	 *  　(b)如果还是无法根据资源路径定位指定的资源，则委派 getResourceByPath(String) 方法来
+	 *   定位，DefaultResourceLoader 的 getResourceByPath(String)方法默认实现逻辑是，构造ClassPathResource类型的资源并返回。
+	 */
 	@Override
 	public Resource getResource(String location) {
 		Assert.notNull(location, "Location must not be null");

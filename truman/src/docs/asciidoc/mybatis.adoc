@@ -1,0 +1,4 @@
+[#mybatis]
+= 整合 MyBATIS
+
+Spring 与 MyBATIS 的整合并不是 Spring 实现的，而且由 MyBATIS 项目组提供的。通过这个整合，也可以学习一下如何提供整合自己的类型框架。
