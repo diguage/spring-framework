@@ -1,0 +1,46 @@
+[#ioc]
+= IoC 的实现原理
+
+include::{includedir}/bean-definition.adoc[leveloffset=+1]
+
+include::{includedir}/bean-factory.adoc[leveloffset=+1]
+
+include::{includedir}/startup-process-overview.adoc[leveloffset=+1]
+
+include::{includedir}/bean-lifecycle-overview.adoc[leveloffset=+1]
+
+include::{includedir}/extensions-overview.adoc[leveloffset=+1]
+
+include::{includedir}/circular-dependence.adoc[leveloffset=+1]
+
+== I18n
+
+properties 文件内容是以 ISO-8859-1 编码的。所以，不支持中文，需要把中文进行转码。
+
+plantuml::{includedir}/puml/MessageSource.puml[{diagram_attr}]
+
+== 事件发布
+
+plantuml::{includedir}/puml/ApplicationEvent.puml[{diagram_attr}]
+
+容器启动伊始，就会检查容器内是否存在名称为 `applicationEventMulticaster` 的 `ApplicationEventMulticaster` 对象实例。有的话就使用提供的实现，没有则默认初始化一个 `SimpleApplicationEventMulticaster` 作为将会使用的 `ApplicationEventMulticaster`。
+
+在 `refresh()` 时，先调用 `initMessageSource()` 初始化 `MessageSource` 实例；然后调用 `initApplicationEventMulticaster()` 初始化 `ApplicationEventMulticaster`。
+
+Spring 是以 Bean 为核心的。Bean 的配置、配置的读取和解析、以合适的数据结构对 Bean 元数据进行各种操作等。
+
+Spring 是如何解决构造函数依赖的呢？以及如何注入呢？
+
+plantuml::{includedir}/puml/BeanDefinition.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/BeanFactory.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/ConfigurationClassPostProcessor.puml[{diagram_attr}]
+
+include::{includedir}/common-interfaces-introduction.adoc[leveloffset=+1]
+
+include::{includedir}/resource.adoc[leveloffset=+1]
+
+include::{includedir}/tag-resolve.adoc[leveloffset=+1]
+
+include::{includedir}/annotations-resolve.adoc[leveloffset=+1]

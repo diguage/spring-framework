@@ -1,0 +1,13 @@
+[#clone-spring-source]
+= 下载 Spring 源码
+
+安装、配置完 Git 之后，就可以来下载 Spring 的源代码了。继续在上节内容提到的终端中操作。首先，切换目录到指定目录下；然后，再使用如下命令来克隆 Spring 的源代码：
+
+[source,bash,{source_attr}]
+----
+git clone https://github.com/spring-projects/spring-framework.git
+----
+
+Spring 源码仓库大概有 900+M，从 GitHub 下载很慢。可以通过码云的镜像下载: https://gitee.com/mirrors/Spring-Framework[https://gitee.com/mirrors/Spring-Framework^] ，这样就会快很多。下载完成后，再将仓库地址更新为 GitHub 上的仓库地址即可。
+
+TIP: 从本节开始，后续章节中 `SPRING_HOME` 就代表 Spring Framework 项目的根目录。
