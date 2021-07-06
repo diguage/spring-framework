@@ -1,0 +1,12 @@
+[#transaction]
+= Spring 事务管理
+
+分析一下 Spring 中对事务支持的管理。同时，再分析一下 Java JTA 和 Java CMT。结合二者再来分析一下 Spring 中的事务管理。
+
+`PROPAGATION_NOT_SUPPORTED` 以非事务方式运行，如果当前存在事务，则把当前事务挂起。 
+
+TODO 如何挂起事务？
+
+`org.springframework.transaction.support.TransactionTemplate.execute` 中，排除 `RuntimeException | Error` 异常就回滚。那么，在 `@Transactional(rollbackFor = Throwable.class)` 中指定了回滚异常，怎么生效？
+
+TODO: 增加创建用户并授权的 SQL 语句。
