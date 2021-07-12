@@ -1,0 +1,42 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - analysis
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v2.3.4
+        with:
+          ref: analysis
+          persist-credentials: false
+
+      - name: Set up JDK 11 ☕️
+        uses: actions/setup-java@v2.1.0
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Install Graphviz 🐰
+        run: |
+          sudo apt update -y -m
+          sudo apt install -y graphviz
+
+      - name: Build 🔧
+        continue-on-error: true
+        run: ./gradlew :truman:asciidoctor
+
+      - name: Custom Code Style 🐦
+        run: |
+          sudo apt install -y sed
+          sed -i 's/<\/head>/<style>p>code{color: #d14 !important;background-color: #f5f5f5 !important;border: 1px solid #e1e1e8;white-space: nowrap;border-radius: 3px;}<\/style>\n<\/head>/' truman/build/docs/asciidoc/index.html
+
+      - name: Deploy 🚀
+        continue-on-error: true
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          branch: dgh-pages # The branch the action should deploy to.
+          folder: truman/build/docs/asciidoc # The folder the action should deploy.
+          single-commit: true
