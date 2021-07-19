@@ -1,0 +1,20 @@
+[#tips]
+[appendix]
+= Spring 奇技淫巧
+
+这里记录一些不太常见的使用技巧。
+
+== 创建同步的 `Set` 实例
+
+[{java_src_attr}]
+----
+Set<String> sets = Collections.newSetFromMap(new ConcurrentHashMap<>(256));
+----
+
+include::{includedir}/inject-static-field.adoc[leveloffset=+1]
+
+include::{includedir}/performance-monitor.adoc[leveloffset=+1]
+
+include::{includedir}/lifecycle-callback.adoc[leveloffset=+1]
+
+include::{includedir}/scheduler.adoc[leveloffset=+1]

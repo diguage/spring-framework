@@ -146,12 +146,24 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+		System.out.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessMergedBeanDefinition",
+				beanDefinition.getClass().getSimpleName(),
+				beanType.getSimpleName(),
+				beanName);
 		LifecycleMetadata metadata = findLifecycleMetadata(beanType);
 		metadata.checkConfigMembers(beanDefinition);
 	}
 
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		System.out.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
 			metadata.invokeInitMethods(bean, beanName);
@@ -167,11 +179,23 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	@Override
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		System.out.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessAfterInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		return bean;
 	}
 
 	@Override
 	public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
+		System.out.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeDestruction",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
 			metadata.invokeDestroyMethods(bean, beanName);

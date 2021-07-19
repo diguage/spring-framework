@@ -19,6 +19,9 @@ package org.springframework.aop.target;
 import org.springframework.beans.BeansException;
 
 /**
+ * 每次调用目标对象上的方法时，都会返回一个新的目标对象实例供调用。
+ * 注意： `scope` 要设置成 `prototype`；通过 `targetBeanName` 属性指定目标对象的 bean 定义名称，而不是引用。
+ *
  * {@link org.springframework.aop.TargetSource} implementation that
  * creates a new instance of the target bean for each request,
  * destroying each instance on release (after each request).

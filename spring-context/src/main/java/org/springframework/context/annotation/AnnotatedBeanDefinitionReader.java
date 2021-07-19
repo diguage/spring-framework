@@ -58,6 +58,17 @@ public class AnnotatedBeanDefinitionReader {
 
 
 	/**
+	 * 在该构造函数中，通过调用
+	 * AnnotationConfigUtils#registerAnnotationConfigProcessors(BeanDefinitionRegistry, Object)
+	 * 方法，来注册内置的 PostProcessor 等：
+	 *
+	 * 1. ConfigurationClassPostProcessor
+	 * 2. AutowiredAnnotationBeanPostProcessor
+	 * 3. CommonAnnotationBeanPostProcessor
+	 * 4. PersistenceAnnotationBeanPostProcessor？ -- 这个得看是否需要
+	 * 5. EventListenerMethodProcessor
+	 * 6. DefaultEventListenerFactory
+	 *
 	 * Create a new {@code AnnotatedBeanDefinitionReader} for the given registry.
 	 * <p>If the registry is {@link EnvironmentCapable}, e.g. is an {@code ApplicationContext},
 	 * the {@link Environment} will be inherited, otherwise a new
@@ -249,7 +260,6 @@ public class AnnotatedBeanDefinitionReader {
 	private <T> void doRegisterBean(Class<T> beanClass, @Nullable String name,
 			@Nullable Class<? extends Annotation>[] qualifiers, @Nullable Supplier<T> supplier,
 			@Nullable BeanDefinitionCustomizer[] customizers) {
-
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
@@ -279,7 +289,8 @@ public class AnnotatedBeanDefinitionReader {
 				customizer.customize(abd);
 			}
 		}
-
+        // TODO BeanDefinitionHolder 的作用是什么？ BeanDefinition 中有 beanName，为啥还要搞个 BeanDefinitionHolder？
+		// BeanDefinitionHolder 包含了 aliases，把 BeanDefinition、beanName 和 aliases 建立起了关联关系。
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);

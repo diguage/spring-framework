@@ -244,6 +244,17 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 
 
 	/**
+	 * 在该函数中通过调用
+	 * AnnotationConfigUtils#registerAnnotationConfigProcessors(BeanDefinitionRegistry, Object)
+	 * 方法，来注册内置的 PostProcessor 等：
+	 *
+	 * 1. ConfigurationClassPostProcessor
+	 * 2. AutowiredAnnotationBeanPostProcessor
+	 * 3. CommonAnnotationBeanPostProcessor
+	 * 4. PersistenceAnnotationBeanPostProcessor？ -- 这个得看是否需要
+	 * 5. EventListenerMethodProcessor
+	 * 6. DefaultEventListenerFactory
+	 *
 	 * Perform a scan within the specified base packages.
 	 * @param basePackages the packages to check for annotated classes
 	 * @return number of beans registered

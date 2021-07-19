@@ -20,6 +20,13 @@ import java.time.Clock;
 import java.util.EventObject;
 
 /**
+ * Spring容器内自定义事件类型
+ * <ul>
+ *     <li>ContextClosedEvent -- 容器在即将关闭时的事件类型</li>
+ *     <li>ContextRefreshedEvent -- 容器在初始化或者刷新时的事件类型。</li>
+ *     <li>RequestHandledEvent -- Web请求处理后发布的事件。</li>
+ * </ul>
+ *
  * Class to be extended by all application events. Abstract as it
  * doesn't make sense for generic events to be published directly.
  *

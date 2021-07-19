@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+	           http://www.springframework.org/schema/beans/spring-beans.xsd
+	           http://www.springframework.org/schema/context
+	           https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<context:annotation-config/>
+
+	<bean id="config"
+		  class="com.diguage.truman.aop.HotSwappableTargetSourceXmlTest.Config"/>
+
+	<bean id="hotSwapTarget"
+		  class="org.springframework.aop.target.HotSwappableTargetSource">
+		<constructor-arg ref="primaryDatasource"/>
+	</bean>
+
+	<bean id="swapDataSourceAdvice"
+		  class="com.diguage.truman.aop.HotSwappableTargetSourceXmlTest$SwapDataSourceAdvice">
+		<property name="primaryDatasource" ref="primaryDatasource"/>
+		<property name="slaveDatasource" ref="slaveDatasource"/>
+		<property name="targetSource" ref="hotSwapTarget"/>
+	</bean>
+
+	<bean id="swapDataSourceAdvisor"
+		  class="org.springframework.aop.support.RegexpMethodPointcutAdvisor">
+		<property name="advice" ref="swapDataSourceAdvice"/>
+		<property name="pattern" value=".*getConnection.*"/>
+	</bean>
+
+	<bean id="dataSource"
+		  class="org.springframework.aop.framework.ProxyFactoryBean">
+		<property name="targetSource" ref="hotSwapTarget"/>
+		<property name="interceptorNames">
+			<list>
+				<value>swapDataSourceAdvisor</value>
+			</list>
+		</property>
+	</bean>
+
+</beans>
