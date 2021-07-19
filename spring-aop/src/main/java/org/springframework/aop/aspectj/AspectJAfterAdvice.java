@@ -42,6 +42,7 @@ public class AspectJAfterAdvice extends AbstractAspectJAdvice
 	}
 
 
+	// 后置通知
 	@Override
 	@Nullable
 	public Object invoke(MethodInvocation mi) throws Throwable {
@@ -49,6 +50,7 @@ public class AspectJAfterAdvice extends AbstractAspectJAdvice
 			return mi.proceed();
 		}
 		finally {
+			// 激活增强方法
 			invokeAdviceMethod(getJoinPointMatch(), null, null);
 		}
 	}
