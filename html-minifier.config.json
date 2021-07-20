@@ -1,0 +1,12 @@
+{"caseSensitive":true,
+       "collapseBooleanAttributes":true,
+       "keepClosingSlash":true,
+       "processConditionalComments":true,
+       "removeComments":true,
+       "removeEmptyAttributes":true,
+       "removeRedundantAttributes":true,
+       "removeScriptTypeAttributes":true,
+       "removeStyleLinkTypeAttributes":true,
+       "sortAttributes":true,
+       "sortClassName":true,
+       "useShortDoctype":true}
