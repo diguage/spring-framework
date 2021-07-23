@@ -1,0 +1,30 @@
+@startuml
+
+skinparam titleFontSize 30
+title **ClassFilter 继承体系**
+
+interface ClassFilter {
+    + TRUE: ClassFilter
+    + matches(Class<?> clazz): boolean
+}
+
+class DefaultIntroductionAdvisor
+DefaultIntroductionAdvisor .right.|> ClassFilter
+
+class AspectJExpressionPointcut
+AspectJExpressionPointcut .left.|> ClassFilter
+
+class AnnotationClassFilter implements ClassFilter
+
+class ControlFlowPointcut implements ClassFilter
+
+class TypePatternClassFilter implements ClassFilter
+
+class RootClassFilter implements ClassFilter
+
+class TrueClassFilter implements ClassFilter
+
+skinparam footerFontSize 20
+footer ''地瓜哥''博客网 · https://www.diguage.com · 出品
+
+@enduml
