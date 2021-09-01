@@ -1,0 +1,151 @@
+plugins {
+    id 'war'
+    id 'me.champeau.jmh'
+    id 'org.gretty' version '3.0.4'
+    id 'org.asciidoctor.jvm.convert'
+    id 'org.asciidoctor.jvm.pdf'
+}
+
+dependencies {
+    compile(project(":spring-context"))
+    compile(project(":spring-jdbc"))
+    compile(project(":spring-webmvc"))
+
+    compile(project(":spring-test"))
+
+    compile("javax.annotation:javax.annotation-api")
+    compile("org.aspectj:aspectjweaver")
+
+    compileOnly 'org.projectlombok:lombok:1.18.20'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
+
+    implementation group: 'com.zaxxer', name: 'HikariCP', version: '4.0.3'
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.26'
+    implementation group: 'org.mybatis', name: 'mybatis', version: '3.5.7'
+    implementation group: 'org.mybatis', name: 'mybatis-spring', version: '2.0.6'
+
+    providedCompile("javax.servlet:javax.servlet-api:4.0.1")
+
+    // 使用测试，注解总报错
+    // TODO 加了下面的依赖不报错了。新问题：明明没有使用 Kotlinx，为啥却要加这个依赖？
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1")
+
+    jmh 'org.openjdk.jmh:jmh-core:1.33'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.33'
+    jmh 'net.sf.jopt-simple:jopt-simple:5.0.4'
+
+    implementation("org.slf4j:slf4j-api")
+    implementation("org.apache.logging.log4j:log4j-slf4j-impl")
+    implementation("org.apache.logging.log4j:log4j-1.2-api")
+    implementation("org.apache.logging.log4j:log4j-jcl")
+    implementation("org.apache.logging.log4j:log4j-jul")
+    implementation("org.apache.logging.log4j:log4j-core")
+
+    implementation("org.junit.platform:junit-platform-launcher")
+    implementation("org.junit.jupiter:junit-jupiter-engine")
+    implementation("org.mockito:mockito-core")
+    implementation("org.mockito:mockito-junit-jupiter")
+}
+
+sourceSets {
+    main {
+        java {
+            exclude 'org/**'
+        }
+        resources {
+            srcDirs 'src/main/resources', 'src/main/java'
+            exclude '**/*.java'
+        }
+    }
+}
+
+test {
+    // make sure the classes dir is used on the test classpath (required by ResourceTests)
+    // When test fixtures are involved, the JAR is used by default
+    classpath = sourceSets.main.output.classesDirs + classpath - files(jar.archiveFile)
+}
+
+asciidoctorj {
+    version = '2.5.1'
+    fatalWarnings ".*"
+//    outputDir "$buildDir/docs/html"
+    options doctype: 'book', eruby: 'erubis'
+    attributes([
+            author: 'D瓜哥',
+            email: 'https://www.diguage.com',
+            revnumber: project.version,
+            icons: 'font',
+            idprefix: '',
+            idseparator: '-',
+            docinfo: 'shared',
+            sectanchors: '',
+            sectnums: '',
+            'source-highlighter': 'rouge',
+            'rouge-style': 'github', // molokai, monokai, github, gruvbox
+            'linkcss': 'true',
+            toc: 'left',
+            toclevels: 4,
+            sectnums: false,
+            sectnumlevels: 4,
+            sectanchors: true,
+            fontsDir: 'cfg/fonts',
+            graphvizdot: '/usr/local/bin/dot',
+            stylesdir: 'css',
+            homepage: 'https://www.diguage.com',
+            'spring-version': project.version,
+            'source_attr': 'linenums,indent=0,subs="attributes,verbatim"',
+            'java_src_attr': 'source%nowrap,java,{source_attr}',
+            'xml_src_attr': 'source%nowrap,xml,{source_attr}',
+            'image_attr': 'align="center",width=98%',
+            'diagram_attr': 'format=svg,align="center",width=98%'
+    ])
+//    attribute 'docinfo1', ''
+    pdfThemes {
+        local 'Source', {
+            themeDir = file('cfg/theme')
+            themeName = 'Source'
+        }
+    }
+    // fontsDir file('cfg/fonts') // add the option, it will throw an error.
+    // theme 'Source' // add the option, it will throw an error.
+    modules {
+        pdf {
+            version '1.6.0'
+        }
+        epub {
+            version '1.5.1'
+        }
+        diagram {
+            version '2.1.2'
+        }
+    }
+}
+
+// TODO open the task, and run `./gradlew :truman:asciidoctor` will throw an error.
+//asciidoctor {
+//    baseDirIsProjectDir()
+//    sourceDir  file('docs')
+//    sources {
+//        include '*.adoc'
+//    }
+//	outputDir "$buildDir/docs/html5"
+////    outputDir  file('build/docs/html5')
+//    logDocuments = true
+//    resources {
+//        from(sourceDir) {
+//            include 'images/*.png', 'css/**', 'js/**'
+//        }
+////		from extractDocResources
+//    }
+//    into 'build/docs/html5/assets'
+//}
+
+//asciidoctorPdf {
+//    baseDirFollowsSourceDir()
+////	configurations 'asciidoctorExt'
+//    sources {
+//        include '*.adoc'
+//    }
+//    outputDir "$buildDir/docs/ref-docs/pdf"
+//    logDocuments = true
+//}
