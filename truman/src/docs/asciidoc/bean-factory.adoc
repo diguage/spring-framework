@@ -1,0 +1,103 @@
+= 核心数据结构：BeanFactory
+
+:source-highlighter: pygments
+:pygments-style: monokai
+:pygments-linenums-mode: table
+
+在 https://www.diguage.com/post/dive-into-spring-core-data-structure-bean-definition/[深入剖析 Spring 核心数据结构：BeanDefinition^] 中，介绍了 `BeanDefinition`。网上很多文章介绍 `BeanDefinition` 的 API，D瓜哥却要反其道而行之，从内部属性来分析一下。下面我们开始。
+
+== 继承体系
+
+Spring 非常好地遵循了面向对象的设计原则：面向接口编程。不放过任何可以提取出成接口的机会。虽然感觉似乎增加了类的继承关系，增加了一点的复杂度。但是，却带来了非常好的可扩展性。而 `BeanFactory` 的继承体系就是一个非常典型的例子。我们来看一下它的继承体系：
+
+plantuml::{includedir}/puml/org.springframework.beans.factory.BeanFactory.puml[{diagram_attr},title="BeanFactory 继承体系",alt="BeanFactory 继承体系"]
+
+* `AliasRegistry`：别名注册器。Spring 中，别名注册相关的功能就是从这里实现的。
+* `SimpleAliasRegistry`：别名注册器的一个简单实现，从内部属性可以看出，它是把别名映射信息存到一个 `Map` 中了。
+* `DefaultSingletonBeanRegistry`：默认的单例 Bean 注册器，从内部属性来说，也是基于 `Map` 实现的。
+* `FactoryBeanRegistrySupport`： `FactoryBean` 注册器。
+* `SingletonBeanRegistry`：单例 Bean 注册器。
+* `BeanDefinitionRegistry`： `BeanDefinition` 注册器。
+* `BeanFactory`：容器的基类。
+* `ListableBeanFactory`：在基本容器基础上，增加了遍历相关功能。
+* `HierarchicalBeanFactory`：在基本容器基础上，增加了父子上下级容器关联。
+* `AutowireCapableBeanFactory`：在基本容器基础上，增加了自动注入功能。
+* `ConfigurableBeanFactory`：对容器增加可配置性，比如父级容器、`ClassLoader`、`TypeConverter` 等。
+* `ConfigurableListableBeanFactory`：可配置可遍历容器。
+* `AbstractBeanFactory`：容器的抽象实现类，实现了容器的基础功能。
+* `AbstractAutowireCapableBeanFactory`：带自动装配功能的抽象容器类。
+* `DefaultListableBeanFactory`：这是 Spring 内部使用的默认容器实现。也是 Spring 中最重要的一个类。
+
+
+== 核心属性
+
+[#registry]
+=== Registry
+
+. `Map<String, String> aliasMap = new ConcurrentHashMap<>(16)`：别名到 Bean 名称的映射。
+. **`Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256)`**：Bean 名称到单例 Bean 的映射。可以理解成，这就是所谓的容器。
+. `Map<String, Object> earlySingletonObjects = new HashMap<>(16)`：Bean 到“未成熟”单例 Bean 的映射。该 Bean 对象只是被创建出来，但是还没有注入依赖。在容器解决循环依赖时，用于存储中间状态。
+. `Map<String, ObjectFactory<?>> singletonFactories = new HashMap<>(16)`：Bean 名称到 Bean 的 `ObjectFactory` 对象的映射，在容器解决循环依赖时，用于存储中间状态。
++
+关于这三个属性的进一步说明，请移步： https://www.diguage.com//post/spring-circular-dependence/[源码剖析 Spring 循环依赖]。
++
+. `Set<String> registeredSingletons = new LinkedHashSet<>(256)`：已经被注册过的 Bean 名称集合。
+. `Set<String> singletonsCurrentlyInCreation = Collections.newSetFromMap(new ConcurrentHashMap<>(16))`：正在创建的 Bean 名称集合。
+. `Set<String> inCreationCheckExclusions = Collections.newSetFromMap(new ConcurrentHashMap<>(16))`：不需要检查的正在创建的 Bean 名称集合。
+. `Set<Exception> suppressedExceptions`：存储创建过程中发现的异常。
+. `boolean singletonsCurrentlyInDestruction = false`：是否正在销毁单例 Bean。
+. `Map<String, Object> disposableBeans = new LinkedHashMap<>()`：需要在销毁时释放资源的 Bean。在 `AbstractBeanFactory#registerDisposableBeanIfNecessary` 中可以看到，所有的单例 Bean 都通过 `DisposableBeanAdapter` 适配器添加到该属性中了。在 `DefaultSingletonBeanRegistry#destroySingleton` 和 `DefaultSingletonBeanRegistry#destroySingletons` 中执行 `destroy()` 操作。
+. `Map<String, Set<String>> containedBeanMap = new ConcurrentHashMap<>(16)`：在 Bean 名称之间包含映射：Bean 名称到 Bean 所包含的一组 Bean 名称。
+. [#dependent-bean-map]`Map<String, Set<String>> dependentBeanMap = new ConcurrentHashMap<>(64)`
++
+该属性和下面的 `dependenciesForBeanMap` 属性的详细说明，请在 https://www.diguage.com/post/dive-into-spring-core-data-structure-bean-definition/#depends-on[深入剖析 Spring 核心数据结构：BeanDefinition : `String[\] dependsOn`] 中查看。
++
+. `Map<String, Set<String>> dependenciesForBeanMap = new ConcurrentHashMap<>(64)`：与上面的 `dependentBeanMap` 属性正好一正一反的关系。两个相加，就是双向映射。
+. `Map<String, Object> factoryBeanObjectCache = new ConcurrentHashMap<>(16)`：由 `FactoryBean` 创建的单例对象的缓存。
+
+=== `BeanFactory`
+
+. `BeanFactory parentBeanFactory`：父容器。
+. `ClassLoader beanClassLoader = ClassUtils.getDefaultClassLoader()`：类加载器。
+. `ClassLoader tempClassLoader`：临时类加载器。
+. `BeanExpressionResolver beanExpressionResolver`：Bean 定义值中表达式的解析策略。
+. `ConversionService conversionService`： Spring 3.0 以后出现，用于类型转换，用于替代 `PropertyEditors`。
+. `Set<PropertyEditorRegistrar> propertyEditorRegistrars = new LinkedHashSet<>(4)`：属性编辑器注册器集合。
+. `Map<Class<?>, Class<? extends PropertyEditor>> customEditors = new HashMap<>(4)`：类型到自定义的属性编辑器的映射。
+. `TypeConverter typeConverter`：类型转换器，用于覆盖默认的 `PropertyEditor` 机制。
+. `List<StringValueResolver> embeddedValueResolvers = new CopyOnWriteArrayList<>()`：内置的字符串值解析器列表。
+. `List<BeanPostProcessor> beanPostProcessors = new BeanPostProcessorCacheAwareList()`：`BeanPostProcessor` 列表。关于它的内容，在 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 中有详细地介绍。
+. `BeanPostProcessorCache beanPostProcessorCache`：`BeanPostProcessor` 缓存，会根据类型，缓存到不同的列表中。
+. `Map<String, Scope> scopes = new LinkedHashMap<>(8)`：`scope` 字符串到具体 `Scope` 实例的映射。
+. `Map<String, RootBeanDefinition> mergedBeanDefinitions = new ConcurrentHashMap<>(256)`：Bean 名称到 `RootBeanDefinition` 的映射。
+. `Set<String> alreadyCreated = Collections.newSetFromMap(new ConcurrentHashMap<>(256))`： 已经创建的 Bean 名称。
+. `ThreadLocal<Object> prototypesCurrentlyInCreation = new NamedThreadLocal<>("Prototype beans currently in creation")`：正常创建的 Bean。
+. `InstantiationStrategy instantiationStrategy`：Bean 实例创建策略。
+. `ParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer()`：方法参数名的解析策略。
+. `boolean allowCircularReferences = true`：是否循环依赖。
+. `boolean allowRawInjectionDespiteWrapping = false`：在循环引用的情况下，是否注入原始 Bean 实例，即使注入的 Bean 最终被包装。
+. `Set<Class<?>> ignoredDependencyTypes = new HashSet<>()`：忽略的依赖类型。
+. `Set<Class<?>> ignoredDependencyInterfaces = new HashSet<>()`：忽略的依赖接口。
+. `NamedThreadLocal<String> currentlyCreatedBean = new NamedThreadLocal<>("Currently created bean")`：正在创建的 Bean。
+. `ConcurrentMap<String, BeanWrapper> factoryBeanInstanceCache = new ConcurrentHashMap<>()`：工厂 Bean 实例。
+. `ConcurrentMap<Class<?>, Method[]> factoryMethodCandidateCache = new ConcurrentHashMap<>()`：工厂方法缓存。
+. `ConcurrentMap<Class<?>, PropertyDescriptor[]> filteredPropertyDescriptorsCache = new ConcurrentHashMap<>()`：过滤后的 `PropertyDescriptor` 缓存。
+. `Map<String, Reference<DefaultListableBeanFactory>> serializableFactories = new ConcurrentHashMap<>(8)`：可序列化的 `DefaultListableBeanFactory`。
+. `boolean allowBeanDefinitionOverriding = true`：是否运行 `BeanDefinition` 覆盖。
+. `boolean allowEagerClassLoading = true`：是否允许类急切加载。
+. `Comparator<Object> dependencyComparator`：依赖排序器。
+. `AutowireCandidateResolver autowireCandidateResolver = SimpleAutowireCandidateResolver.INSTANCE`：注入候选者解析器。
+. `Map<Class<?>, Object> resolvableDependencies = new ConcurrentHashMap<>(16)`：依赖类型到合适的注入对象的映射。
+. **`Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256)`**：Bean 名称到 `BeanDefinition` 的映射。关于 `BeanDefinition` 在 https://www.diguage.com/post/dive-into-spring-core-data-structure-bean-definition/[深入剖析 Spring 核心数据结构：BeanDefinition^] 有更详细的介绍。
+. `Map<String, BeanDefinitionHolder> mergedBeanDefinitionHolders = new ConcurrentHashMap<>(256)`：Bean 名称到 `BeanDefinitionHolder` 的映射。
+. `Map<Class<?>, String[]> allBeanNamesByType = new ConcurrentHashMap<>(64)`：类型到所有该类型的 Bean 名称的映射。
+. `Map<Class<?>, String[]> singletonBeanNamesByType = new ConcurrentHashMap<>(64)`：类型到所有该类型的单例 Bean 名称的映射。
+. `List<String> beanDefinitionNames = new ArrayList<>(256)`：Bean 名称列表。
+. `Set<String> manualSingletonNames = new LinkedHashSet<>(16)`：
+. `String[] frozenBeanDefinitionNames`：冻结的 Bean 名称。
+. `boolean configurationFrozen`：配置是否冻结。
+
+从上面这些属性可以看出，所谓的容器，其实就是一个 `Map` 属性 `Map<String, Object> singletonObjects`。而 Bean 别名也是一个 `Map` 属性 `Map<String, String> aliasMap`。从别名到 Bean 实例只需要做两个 `Map` 查找就可以完成了。
+
+在网上查了查资料，没有对这些属性做比较详细的介绍，这个文章也有很多不完善的地方，回头随着 D瓜哥对 Spring 代码的了解后续再逐步完善。
+

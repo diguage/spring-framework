@@ -1,0 +1,24 @@
+[#resource]
+= 资源加载 与 Resource
+
+`ResourceLoader` 也是一种策略模式，加载资源的策略。
+
+plantuml::{includedir}/puml/Resource-ResourceLoader.puml[{diagram_attr}]
+
+`classpath*:` 与 `classpath:` 的唯一区别就在于，如果能够在 classpath 中找到多个指定的资源，则返回多个。
+
+
+`ApplicationContext` 继承了 `ResourcePatternResolver`，当 然就间接实现了 `ResourceLoader` 接口。所以，任何的 `ApplicationContext` 实现都可以看作是一个 `ResourceLoader` 甚至 `ResourcePatternResolver`。而这就是 `ApplicationContext` 支持 Spring 内统一资源加载策略的真相。
+
+plantuml::{includedir}/puml/ResourceLoader-ApplicationContext.puml[{diagram_attr}]
+
+`AbstractApplicationContext` 继承了 `DefaultResourceLoader`，那么，它的 `getResource(String)` 当然就直接用 `DefaultResourceLoader` 的了。
+
+`AbstractApplicationContext` 类的内 部声明有一个 `resourcePatternResolver`，类型是 `ResourcePatternResolver`，对应的实例类型为 `PathMatchingResourcePatternResolver`。
+
+`ApplicationContext` 的实现类在作为 `ResourceLoader` 或者 `ResourcePatternResolver` 时候的行为，完全就是委派给了 `PathMatchingResourcePatternResolver` 和 `DefaultResourceLoader` 来做。
+
+
+`Resource` 类图
+
+plantuml::{includedir}/puml/org.springframework.core.io.Resource.puml[{diagram_attr}]
