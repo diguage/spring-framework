@@ -140,6 +140,9 @@ public final class SpringFactoriesLoader {
 
 		result = new HashMap<>();
 		try {
+			// 这就是为什么 Starter 的生效必须依赖配置文件 META-INF/spring.factories。
+			// 这里扫描各个包中的 META-INF/spring.factories，把配置读取出来
+			// TODO 这里为什么会加载非常多的 urls？加载的类又由谁来处理？
 			Enumeration<URL> urls = classLoader.getResources(FACTORIES_RESOURCE_LOCATION);
 			while (urls.hasMoreElements()) {
 				URL url = urls.nextElement();
