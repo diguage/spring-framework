@@ -123,6 +123,7 @@ final class PostProcessorRegistrationDelegate {
 
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
 			boolean reiterate = true;
+			// TODO 这个地方为什么使用一个循环来调用
 			while (reiterate) {
 				reiterate = false;
 				postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
@@ -277,6 +278,7 @@ final class PostProcessorRegistrationDelegate {
 
 		// Re-register post-processor for detecting inner beans as ApplicationListeners,
 		// moving it to the end of the processor chain (for picking up proxies etc).
+		// TODO 这个实例什么时候被调用？
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(applicationContext));
 	}
 
@@ -361,11 +363,23 @@ final class PostProcessorRegistrationDelegate {
 
 		@Override
 		public Object postProcessBeforeInitialization(Object bean, String beanName) {
+			System.out.printf(".. %s#%s(%s, %s)%n%n",
+					getClass().getSimpleName(),
+					"postProcessBeforeInitialization",
+					bean.getClass().getSimpleName(),
+					beanName);
+
 			return bean;
 		}
 
 		@Override
 		public Object postProcessAfterInitialization(Object bean, String beanName) {
+			System.out.printf(".. %s#%s(%s, %s)%n%n",
+					getClass().getSimpleName(),
+					"postProcessAfterInitialization",
+					bean.getClass().getSimpleName(),
+					beanName);
+
 			if (!(bean instanceof BeanPostProcessor) && !isInfrastructureBean(beanName) &&
 					this.beanFactory.getBeanPostProcessorCount() < this.beanPostProcessorTargetCount) {
 				if (logger.isInfoEnabled()) {

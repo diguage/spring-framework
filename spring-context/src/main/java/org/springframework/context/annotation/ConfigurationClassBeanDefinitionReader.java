@@ -179,6 +179,8 @@ class ConfigurationClassBeanDefinitionReader {
 	}
 
 	/**
+	 * 由此可以看出，对 `@Bean` 的处理复用了自定义 `factory-method` 的处理。
+	 *
 	 * Read the given {@link BeanMethod}, registering bean definitions
 	 * with the BeanDefinitionRegistry based on its contents.
 	 */
@@ -234,7 +236,12 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 		else {
 			// instance @Bean method
+			// 这里设置 factoryBeanName 和 factoryMethodName。
+			// 可以通过 BeanDefinitionParserDelegate.FACTORY_METHOD_ATTRIBUTE
+			// 与 BeanDefinitionParserDelegate.FACTORY_BEAN_ATTRIBUTE 两个常量找到
+			// 对 `factory-method` 与 `factory-bean` 的处理
 			beanDef.setFactoryBeanName(configClass.getBeanName());
+			// 底层调用了 setFactoryMethodName 方法，与对 `factory-method` 的处理一致了。
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}
 
