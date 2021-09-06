@@ -1,0 +1,45 @@
+@startuml
+
+skinparam titleFontSize 30
+title **Joinpoint 继承体系**
+
+interface Joinpoint {
+    + proceed(): Object
+    + getThis(): Object
+    + getStaticPart(): AccessibleObject
+}
+
+interface Invocation extends Joinpoint {
+    + getArguments(): Object[]
+}
+
+interface ConstructorInvocation extends Invocation {
+    + getConstructor(): Constructor<?>
+}
+
+interface MethodInvocation extends Invocation {
+    + getMethod(): Method
+}
+
+interface ProxyMethodInvocation extends MethodInvocation {
+    + getProxy(): Object
+    + invocableClone(): MethodInvocation
+    + invocableClone(Object... arguments): MethodInvocation
+    + setArguments(Object... arguments): void
+    + setUserAttribute(String key, @Nullable Object value): void
+    + getUserAttribute(String key): Object
+}
+
+class ReflectiveMethodInvocation implements ProxyMethodInvocation {
+    # proxy: Object
+    # target: Object
+    # method: Method
+    # interceptorsAndDynamicMethodMatchers: List<?>
+
+    + getUserAttributes(): Map<String, Object>
+}
+
+skinparam footerFontSize 20
+footer ''地瓜哥''博客网 · https://www.diguage.com · 出品
+
+@enduml
