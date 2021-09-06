@@ -1,0 +1,9 @@
+[#lifecycle-callback]
+= 生命周期回调
+
+. `@PostConstruct`
+. `@PreDestroy`
+. `InitializingBean`
+. `DisposableBean`
+. `init-method`
+. `destroy-method`

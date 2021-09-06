@@ -266,7 +266,7 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 	public boolean matches(Class<?> targetClass) {
 		PointcutExpression pointcutExpression = obtainPointcutExpression();
 		try {
-			try {
+			try { // 表达式匹配交给了 AspectJ 来完成了
 				return pointcutExpression.couldMatchJoinPointsInType(targetClass);
 			}
 			catch (ReflectionWorldException ex) {

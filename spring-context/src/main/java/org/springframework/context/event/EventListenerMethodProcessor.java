@@ -94,6 +94,11 @@ public class EventListenerMethodProcessor
 
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+		System.out.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		this.beanFactory = beanFactory;
 
 		Map<String, EventListenerFactory> beans = beanFactory.getBeansOfType(EventListenerFactory.class, false, false);

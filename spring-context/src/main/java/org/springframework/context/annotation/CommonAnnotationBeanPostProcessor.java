@@ -67,6 +67,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.util.StringValueResolver;
 
 /**
+ * 主要处理@Resource、@PostConstruct和@PreDestroy注解的实现
+ * Resource的处理是由他自己完成
+ * 其他两个是由他的父类完成
+ * 父类InitDestroyAnnotationBeanPostProcessor的postProcessMergedBeanDefinition
+ * 会找出被@PostConstruct和@PreDestroy注解修饰的方法
+ *
  * {@link org.springframework.beans.factory.config.BeanPostProcessor} implementation
  * that supports common Java annotations out of the box, in particular the common
  * annotations in the {@code jakarta.annotation} package. These common Java
@@ -273,8 +279,18 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+		System.out.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessMergedBeanDefinition",
+				beanDefinition.getClass().getSimpleName(),
+				beanType.getSimpleName(),
+				beanName);
+
 		super.postProcessMergedBeanDefinition(beanDefinition, beanType, beanName);
+		// 搜集 @Resource、@PostConstruct、@PreDestroy 等信息
+		// 信息缓存到了 this.injectionMetadataCache 变量中，注入也是从这个变量中读取值
 		InjectionMetadata metadata = findResourceMetadata(beanName, beanType, null);
+		// TODO 不知道为何还要设置的到 RootBeanDefinition.externallyManagedConfigMembers 变量中？
 		metadata.checkConfigMembers(beanDefinition);
 	}
 
@@ -285,18 +301,36 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 
 	@Override
 	public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
+		System.out.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeInstantiation",
+				beanClass.getSimpleName(),
+				beanName);
 		return null;
 	}
 
 	@Override
 	public boolean postProcessAfterInstantiation(Object bean, String beanName) {
+		System.out.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessAfterInstantiation",
+				bean.getClass().getSimpleName(),
+				beanName);
 		return true;
 	}
 
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
+		System.out.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessProperties",
+				pvs.getClass().getSimpleName(),
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		InjectionMetadata metadata = findResourceMetadata(beanName, bean.getClass(), pvs);
 		try {
+			// 注入依赖
 			metadata.inject(bean, beanName, pvs);
 		}
 		catch (Throwable ex) {

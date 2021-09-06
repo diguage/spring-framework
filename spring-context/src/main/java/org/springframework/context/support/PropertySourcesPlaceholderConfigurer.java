@@ -129,6 +129,11 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 	 */
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		System.out.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		if (this.propertySources == null) {
 			this.propertySources = new MutablePropertySources();
 			if (this.environment != null) {

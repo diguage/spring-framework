@@ -1,0 +1,211 @@
+plugins {
+    id 'war'
+    id 'me.champeau.jmh'
+    id 'org.asciidoctor.jvm.convert'
+    id 'org.asciidoctor.jvm.pdf'
+//    id 'java'
+}
+
+dependencies {
+    implementation(project(":spring-context"))
+    implementation(project(":spring-jdbc"))
+    implementation(project(":spring-webmvc"))
+
+    implementation(project(":spring-test"))
+
+    implementation("jakarta.annotation:jakarta.annotation-api")
+    implementation("com.fasterxml.jackson.core:jackson-databind")
+
+    implementation("org.aspectj:aspectjweaver")
+
+    implementation('org.projectlombok:lombok:1.18.24')
+    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+
+    implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
+    implementation group: 'com.mysql', name: 'mysql-connector-j', version: '8.0.31'
+    implementation group: 'org.mybatis', name: 'mybatis', version: '3.5.11'
+    implementation group: 'org.mybatis', name: 'mybatis-spring', version: '3.0.1'
+
+    providedCompile("jakarta.servlet:jakarta.servlet-api:6.0.0")
+    implementation('io.undertow:undertow-servlet:2.3.2.Final')
+    implementation('io.undertow:undertow-websockets-jsr:2.3.2.Final')
+
+
+//    // 使用测试，注解总报错
+//    // TODO 加了下面的依赖不报错了。新问题：明明没有使用 Kotlinx，为啥却要加这个依赖？
+//    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+
+    jmh 'org.openjdk.jmh:jmh-core:1.36'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.36'
+    jmh 'net.sf.jopt-simple:jopt-simple:5.0.4'
+
+    implementation("org.slf4j:slf4j-api")
+    implementation("org.apache.logging.log4j:log4j-slf4j-impl")
+    implementation("org.apache.logging.log4j:log4j-1.2-api")
+    implementation("org.apache.logging.log4j:log4j-jcl")
+    implementation("org.apache.logging.log4j:log4j-jul")
+    implementation("org.apache.logging.log4j:log4j-core")
+
+    implementation("org.junit.platform:junit-platform-launcher")
+    implementation("org.junit.jupiter:junit-jupiter-engine")
+    implementation("org.mockito:mockito-core")
+    implementation("org.mockito:mockito-junit-jupiter")
+    implementation("org.assertj:assertj-core")
+
+    implementation platform("org.apache.dubbo:dubbo-bom:3.2.0-beta.3")
+    implementation("org.apache.dubbo:dubbo-registry-multicast")
+    implementation("org.apache.dubbo:dubbo-registry-zookeeper")
+    implementation("org.apache.dubbo:dubbo-configcenter-zookeeper")
+    implementation("org.apache.dubbo:dubbo-metadata-report-zookeeper")
+    implementation("org.apache.dubbo:dubbo-rpc-dubbo")
+    implementation("org.apache.dubbo:dubbo-config-spring")
+    implementation("org.apache.dubbo:dubbo-remoting-netty4")
+    implementation("org.apache.dubbo:dubbo-serialization-hessian2")
+}
+
+//compileJava {
+//    options.compilerArgs << '-parameters'
+//}
+
+//sourceSets {
+//    main {
+//        java {
+//            exclude 'org/**'
+//        }
+//        resources {
+//            srcDirs 'src/main/resources', 'src/main/java'
+//            exclude '**/*.java'
+//        }
+//    }
+//}
+
+test {
+    // make sure the classes dir is used on the test classpath (required by ResourceTests)
+    // When test fixtures are involved, the JAR is used by default
+    classpath = sourceSets.main.output.classesDirs + classpath - files(jar.archiveFile)
+}
+
+asciidoctor {
+//    sourceDir  file('docs')
+    sources {
+        include 'index.adoc'
+    }
+//
+//    baseDirIsProjectDir()
+
+//    outputDir  file('build/docs')
+}
+
+asciidoctorj {
+    def sourceAttr = 'linenums,indent=0,subs="attributes,verbatim"'
+
+    version = '2.5.7'
+    fatalWarnings ".*"
+//    outputDir "$buildDir/docs/html"
+    options doctype: 'book', eruby: 'erubis'
+    attributes([
+            author: 'D瓜哥',
+            email: 'https://www.diguage.com',
+            revnumber: project.version,
+            icons: 'font',
+            idprefix: '',
+            idseparator: '-',
+            docinfo: 'shared',
+            sectanchors: '',
+            sectnums: '',
+            'source-highlighter': 'rouge',
+            'rouge-style': 'github', // molokai, monokai, github, gruvbox
+            'linkcss': 'true',
+            toc: 'left',
+            toclevels: 4,
+            sectnums: false,
+            sectnumlevels: 4,
+            sectanchors: true,
+            fontsDir: 'cfg/fonts',
+            graphvizdot: '/usr/local/bin/dot',
+            stylesdir: 'css',
+            homepage: 'https://www.diguage.com',
+            plantumlconfig: "${project.projectDir}/cfg/plantuml.cfg",
+
+            'spring-version'     : project.version,
+            'source_attr'        : sourceAttr,
+            'java_src_attr'      : "source%nowrap,java,${sourceAttr}",
+            'xml_src_attr'       : "source%nowrap,xml,${sourceAttr}",
+            'image_attr'         : 'align="center",width=98%',
+            'diagram_attr'       : 'format=svg,align="center",width=98%',
+            // 'rootDir'   : project.rootDir,    // = /path/to/spring-framework
+            // 'projectDir': project.projectDir, // = /path/to/spring-framework/truman
+            // 'buildDir'  : project.buildDir,   // = /path/to/spring-framework/truman/build
+            'truman_src_dir'     : "${project.projectDir}/src/main/java/com/diguage/truman",
+            'truman_resource_dir': "${project.projectDir}/src/main/resources/com/diguage/truman",
+            'aop_src_dir'        : "${project.rootDir}/spring-aop/src/main/java/org/springframework/aop",
+            'beans_src_dir'      : "${project.rootDir}/spring-beans/src/main/java/org/springframework/beans",
+            'context_src_dir'    : "${project.rootDir}/spring-context/src/main/java/org/springframework",
+            'core_src_dir'       : "${project.rootDir}/spring-core/src/main/java/org/springframework",
+            'jdbc_src_dir'       : "${project.rootDir}/spring-jdbc/src/main/java/org/springframework/jdbc",
+            'tx_src_dir'         : "${project.rootDir}/spring-tx/src/main/java/org/springframework"
+    ])
+//    attribute 'docinfo1', ''
+    pdfThemes {
+        local 'Source', {
+            themeDir = file('cfg/theme')
+            themeName = 'Source'
+        }
+    }
+    // fontsDir file('cfg/fonts') // add the option, it will throw an error.
+    // theme 'Source' // add the option, it will throw an error.
+    modules {
+        pdf {
+            version '2.3.3'
+        }
+        epub {
+            version '1.5.1'
+        }
+        diagram {
+            version '2.2.3'
+        }
+    }
+}
+
+// TODO open the task, and run `./gradlew :truman:asciidoctor` will throw an error.
+//asciidoctor {
+//    baseDirIsProjectDir()
+//    sourceDir  file('docs')
+//    sources {
+//        include '*.adoc'
+//    }
+//	outputDir "$buildDir/docs/html5"
+////    outputDir  file('build/docs/html5')
+//    logDocuments = true
+//    resources {
+//        from(sourceDir) {
+//            include 'images/*.png', 'css/**', 'js/**'
+//        }
+////		from extractDocResources
+//    }
+//    into 'build/docs/html5/assets'
+//}
+
+//asciidoctorPdf {
+//    baseDirFollowsSourceDir()
+////	configurations 'asciidoctorExt'
+//    sources {
+//        include '*.adoc'
+//    }
+//    outputDir "$buildDir/docs/ref-docs/pdf"
+//    logDocuments = true
+//}
+
+repositories {
+    maven {
+        url 'https://maven.aliyun.com/repository/public/'
+    }
+//    maven {
+//        url 'https://maven.aliyun.com/repository/spring/'
+//    }
+    maven {
+        url 'https://repository.apache.org/snapshots/'
+    }
+    mavenLocal()
+    mavenCentral()
+}
