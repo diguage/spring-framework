@@ -130,6 +130,7 @@ final class PostProcessorRegistrationDelegate {
 
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
 			boolean reiterate = true;
+			// TODO 这个地方为什么使用一个循环来调用
 			while (reiterate) {
 				reiterate = false;
 				postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
@@ -205,6 +206,9 @@ final class PostProcessorRegistrationDelegate {
 		beanFactory.clearMetadataCache();
 	}
 
+	/**
+	 * 实例化并注册 BeanPostProcessor 后置处理器
+	 */
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
@@ -284,6 +288,7 @@ final class PostProcessorRegistrationDelegate {
 
 		// Re-register post-processor for detecting inner beans as ApplicationListeners,
 		// moving it to the end of the processor chain (for picking up proxies etc).
+		// TODO 这个实例什么时候被调用？
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(applicationContext));
 	}
 
@@ -317,6 +322,9 @@ final class PostProcessorRegistrationDelegate {
 		new MergedBeanDefinitionPostProcessorInvoker(beanFactory).invokeMergedBeanDefinitionPostProcessors();
 	}
 
+	/**
+	 * 对 PostProcessors(BeanFactoryPostProcessor、BeanPostProcessor)进行排序
+	 */
 	private static void sortPostProcessors(List<?> postProcessors, ConfigurableListableBeanFactory beanFactory) {
 		// Nothing to sort?
 		if (postProcessors.size() <= 1) {
@@ -361,6 +369,7 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 	/**
+	 * 调用 BeanFactoryPostProcessors 后置处理器。
 	 * Register the given BeanPostProcessor beans.
 	 */
 	private static void registerBeanPostProcessors(
@@ -398,11 +407,23 @@ final class PostProcessorRegistrationDelegate {
 
 		@Override
 		public Object postProcessBeforeInitialization(Object bean, String beanName) {
+			System.out.printf(".. %s#%s(%s, %s)%n%n",
+					getClass().getSimpleName(),
+					"postProcessBeforeInitialization",
+					bean.getClass().getSimpleName(),
+					beanName);
+
 			return bean;
 		}
 
 		@Override
 		public Object postProcessAfterInitialization(Object bean, String beanName) {
+			System.out.printf(".. %s#%s(%s, %s)%n%n",
+					getClass().getSimpleName(),
+					"postProcessAfterInitialization",
+					bean.getClass().getSimpleName(),
+					beanName);
+
 			if (!(bean instanceof BeanPostProcessor) && !isInfrastructureBean(beanName) &&
 					this.beanFactory.getBeanPostProcessorCount() < this.beanPostProcessorTargetCount) {
 				if (logger.isInfoEnabled()) {

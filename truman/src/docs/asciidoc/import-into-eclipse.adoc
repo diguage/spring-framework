@@ -1,0 +1,4 @@
+[#import-into-eclipse]
+= 将 Spring 导入到 Eclipse 中
+
+在 Mac OSX 、 Ubuntu 上执行 `SPRING_HOME/import-into-eclipse.sh`；在 Windows 上 `{var_spring_home}/import-into-eclipse.bat`，并参考相关的输出内容来导入到 Eclipse 中。

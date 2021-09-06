@@ -6702,7 +6702,7 @@ to be supplied via field or setter injection so that they can be re-injected bet
 method invocations.
 ====
 
-In the following example, Spring injects the `OrderService` bean from the
+In the following example, Spring injects the `OrderServiceImpl` bean from the
 `ApplicationContext` loaded from `TestConfig.class` into the
 `OrderServiceIntegrationTests` constructor.
 
@@ -6772,7 +6772,7 @@ type `ApplicationContext` (or a sub-type thereof) or is annotated or meta-annota
 `@Autowired`, `@Qualifier`, or `@Value`, Spring injects the value for that specific
 parameter with the corresponding bean from the test's `ApplicationContext`.
 
-In the following example, Spring injects the `OrderService` from the `ApplicationContext`
+In the following example, Spring injects the `OrderServiceImpl` from the `ApplicationContext`
 loaded from `TestConfig.class` into the `deleteOrder()` test method:
 
 [source,java,indent=0,subs="verbatim,quotes",role="primary"]

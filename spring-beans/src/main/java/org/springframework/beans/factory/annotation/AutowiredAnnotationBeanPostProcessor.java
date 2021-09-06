@@ -268,6 +268,11 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
+		System.out.printf(".. %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"setBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		if (!(beanFactory instanceof ConfigurableListableBeanFactory)) {
 			throw new IllegalArgumentException(
 					"AutowiredAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory: " + beanFactory);
@@ -309,7 +314,17 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 	}
 
 	private InjectionMetadata findInjectionMetadata(String beanName, Class<?> beanType, RootBeanDefinition beanDefinition) {
+		System.out.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessMergedBeanDefinition",
+				beanDefinition.getClass().getSimpleName(),
+				beanType.getSimpleName(),
+				beanName);
+
+		// 收集 @Autowired 的依赖信息
+		// 信息缓存到了 this.injectionMetadataCache 变量中，注入也是从这个变量中读取值
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, beanType, null);
+		// TODO 不知道为何还要设置的到 RootBeanDefinition.externallyManagedConfigMembers 变量中？
 		metadata.checkConfigMembers(beanDefinition);
 		return metadata;
 	}
@@ -478,8 +493,16 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
+		System.out.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessProperties",
+				pvs.getClass().getSimpleName(),
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
+			// 注入依赖
 			metadata.inject(bean, beanName, pvs);
 		}
 		catch (BeanCreationException ex) {
