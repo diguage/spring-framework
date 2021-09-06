@@ -1,0 +1,72 @@
+[#change-maven-repo-url]
+= 修改 Maven 仓库地址
+
+Spring 使用 Gradle 作为构建工具。Gradle 自身只是一个构建工具，官方没有提供依赖的仓库，它使用 Maven 的仓库。在 Spring 代码的 `build.gradle` 文件中可以看出，Spring 使用了自身搭建的开放仓库。具体代码如下：
+
+[source,groovy,{source_attr}]
+----
+buildscript {
+	repositories {
+		maven { url "https://repo.spring.io/plugins-release" }
+	}
+	dependencies {
+		classpath("org.springframework.build.gradle:propdeps-plugin:0.0.7")
+		classpath("org.asciidoctor:asciidoctor-gradle-plugin:1.5.2")
+		classpath("io.spring.gradle:docbook-reference-plugin:0.3.1")
+		classpath("ws.antonov.gradle.plugins:gradle-plugin-protobuf:0.9.1")
+	}
+}
+
+/// ......
+
+repositories {
+  maven { url "https://repo.spring.io/libs-release" }
+  maven { url "https://repo.spring.io/milestone" }
+  maven { url "https://repo.spring.io/snapshot" }   // reactor 2.0.6 snapshot
+}
+----
+
+从上面的代码可以看出，Spring Framework 依赖的自身以及第三方库都是存在于它们自建的仓库中的。但是，由于特殊的国内网络原因，再下载这些依赖时，就会特别卡。
+
+我们能否使用国内的依赖仓库来加快下载速度呢？回答是肯定的。由于 Gradle 并没有自建自己的仓库，而是使用的 Maven 仓库，这样就可以使用所有的 Maven 仓库。目前，开源中国搭建了 Maven 第三方库。我们就用这个仓库了。
+
+根据 Gradle 的官方文档， https://docs.gradle.org/current/userguide/init_scripts.html[Chapter 42. Initialization Scripts] 中的描述，在 `USER_HOME/.gradle/init.d/` 目录下，创建文件 `init.gradle`，然后在文件添加如下内容：
+
+[source,groovy,{source_attr}]
+----
+apply plugin:EnterpriseRepositoryPlugin
+
+class EnterpriseRepositoryPlugin implements Plugin<Gradle> {
+
+    private static String ENTERPRISE_REPOSITORY_URL = "{link_maven_repo}"
+
+    void apply(Gradle gradle) {
+        // ONLY USE ENTERPRISE REPO FOR DEPENDENCIES
+        gradle.allprojects { project ->
+            project.repositories {
+
+                all { ArtifactRepository repo ->
+                    if (!(repo instanceof MavenArtifactRepository) ||
+                          repo.url.toString() != ENTERPRISE_REPOSITORY_URL) {
+                        project.logger.lifecycle "Repository ${repo.url} removed."+
+                            " Only $ENTERPRISE_REPOSITORY_URL is allowed"
+                        remove repo
+                    }
+                }
+
+                // add the enterprise repository
+                maven {
+                    name "STANDARD_ENTERPRISE_REPO"
+                    url ENTERPRISE_REPOSITORY_URL
+                }
+            }
+        }
+    }
+}
+----
+
+TIP: 由于不需要专门配置 Gradle。所以，D瓜哥就使用 `GRADLE_USER_HOME` 来表示每个用户的 Gradle 根目录，该目录存放用户专属的 Gradle 的依赖，配置等等。从本节开始，以后章节使用 `GRADLE_USER_HOME` 来表示 Gradle 的用户根目录。`GRADLE_USER_HOME` 等价于 `USER_HOME/.gradle/`。
+
+这样，在执行 Gradle 命令，需要下载依赖时会自动替换掉其他的库，改用开源中国的库。
+
+NOTE: 根据D瓜哥的经验来看，开源中国的 Maven 库并没有收录 Spring Framework 所有的依赖包。这样就会导致在下载依赖时失败。如果遇到这种情况，请把上面的脚步文件移动到其他目录（注意：不可以存放在 `GRADLE_USER_HOME` 目录下），然后多重试几次。如果还是不行，那就“科学上网”吧。
