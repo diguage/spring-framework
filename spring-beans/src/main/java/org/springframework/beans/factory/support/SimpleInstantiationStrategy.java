@@ -54,19 +54,25 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	}
 
 
+	// 使用初始化测量实例化 Bean 对象
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
 		// Don't override the class with CGLIB if no overrides.
+		// 如果 Bean 定义中没有方法覆盖，则就不需要 CGLIB 父类的方法 FIXME dgg 这句话需要有优化
 		if (!bd.hasMethodOverrides()) {
 			Constructor<?> constructorToUse;
 			synchronized (bd.constructorArgumentLock) {
+				// 获取对象的构造方法或工厂方法
 				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
+				// 如果没有构造方法且没有工厂方法
 				if (constructorToUse == null) {
+					// 使用 JDK 的反射机制，判断要实例化的 Bean 是否是接口
 					final Class<?> clazz = bd.getBeanClass();
 					if (clazz.isInterface()) {
 						throw new BeanInstantiationException(clazz, "Specified class is an interface");
 					}
 					try {
+						// 这里是一个匿名内置类，使用反射机制获取 Bean 的构造方法
 						constructorToUse = clazz.getDeclaredConstructor();
 						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
 					}
@@ -75,10 +81,12 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					}
 				}
 			}
+			// 使用 BeanUtils 实例化，通过反射机制调用“constructor.newInstance(args)”来进行实例化
 			return BeanUtils.instantiateClass(constructorToUse);
 		}
 		else {
 			// Must generate CGLIB subclass.
+			// 使用 CGLIB 来实例化对象
 			return instantiateWithMethodInjection(bd, beanName, owner);
 		}
 	}

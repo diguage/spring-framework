@@ -107,10 +107,14 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** Map between containing bean names: bean name to Set of bean names that the bean contains. */
 	private final Map<String, Set<String>> containedBeanMap = new ConcurrentHashMap<>(16);
 
-	/** Map between dependent bean names: bean name to Set of dependent bean names. */
+	/** Map between dependent bean names: bean name to Set of dependent bean names.
+	 * 请看 {@link AbstractBeanDefinition#dependsOn}
+	 */
 	private final Map<String, Set<String>> dependentBeanMap = new ConcurrentHashMap<>(64);
 
-	/** Map between depending bean names: bean name to Set of bean names for the bean's dependencies. */
+	/** Map between depending bean names: bean name to Set of bean names for the bean's dependencies.
+	 * 请看 {@link AbstractBeanDefinition#dependsOn}
+	 */
 	private final Map<String, Set<String>> dependenciesForBeanMap = new ConcurrentHashMap<>(64);
 
 
@@ -257,6 +261,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {
+					// 创建完 Bean 后，将其加入到容器中
 					addSingleton(beanName, singletonObject);
 				}
 			}
@@ -405,25 +410,33 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	/**
+	 * 为指定的 Bean 注入依赖的 Bean。<p/>
+	 *
 	 * Register a dependent bean for the given bean,
 	 * to be destroyed before the given bean is destroyed.
 	 * @param beanName the name of the bean
 	 * @param dependentBeanName the name of the dependent bean
 	 */
 	public void registerDependentBean(String beanName, String dependentBeanName) {
+		// 处理 Bean 名称，将别名转换为规范的 Bean 名称
 		String canonicalName = canonicalName(beanName);
-
+		// 多线程同步，保证容器内数据的一致性
+		// 先从容器中： bean 名称 --> 全部依赖 Bean 名称集合找查找指定名称 Bean 的依赖 Bean
 		synchronized (this.dependentBeanMap) {
 			Set<String> dependentBeans =
 					this.dependentBeanMap.computeIfAbsent(canonicalName, k -> new LinkedHashSet<>(8));
+			// 向容器中： bean名称 --> 全部依赖 Bean 名称集合添加 Bean 的依赖信息，
+			// 即，将 Bean 所依赖的 Bean 添加到容器的集合中
 			if (!dependentBeans.add(dependentBeanName)) {
 				return;
 			}
 		}
-
+		// 从容器中： bean名称 --> 指定名称 Bean 的依赖 Bean 集合找查找给定名称 Bean 的依赖 Bean
 		synchronized (this.dependenciesForBeanMap) {
 			Set<String> dependenciesForBean =
 					this.dependenciesForBeanMap.computeIfAbsent(dependentBeanName, k -> new LinkedHashSet<>(8));
+			// 向容器中： bean 名称 --> 指定 Bean 的依赖 Bean 名称集合添加 Bean 的依赖信息
+			// 即，将 Bean 所依赖的 Bean 添加到容器的集合中
 			dependenciesForBean.add(canonicalName);
 		}
 	}
