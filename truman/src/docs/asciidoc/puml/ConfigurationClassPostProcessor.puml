@@ -1,0 +1,16 @@
+@startuml
+
+interface BeanFactoryPostProcessor {
+  + postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory): void
+}
+
+interface BeanDefinitionRegistryPostProcessor extends BeanFactoryPostProcessor {
+  + postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry): void
+}
+
+class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPostProcessor
+
+skinparam footerFontSize 20
+footer ''地瓜哥''博客网 · https://www.diguage.com · 出品
+
+@enduml

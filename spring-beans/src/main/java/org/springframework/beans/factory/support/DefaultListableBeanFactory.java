@@ -159,6 +159,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	private final Map<Class<?>, Object> resolvableDependencies = new ConcurrentHashMap<>(16);
 
 	/** Map of bean definition objects, keyed by bean name. */
+	// 存储注册信息的 BeanDefinition
 	private final Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256);
 
 	/** Map from bean name to merged BeanDefinitionHolder. */
@@ -916,11 +917,19 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Trigger initialization of all non-lazy singleton beans...
 		for (String beanName : beanNames) {
+			// 获取指定名称的 BeanDefinition
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			// Bean 不是抽象的，是单例模式的，且 lazy-init = false
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				// 如果指定名称的 Bean 是创建容器的 Bean？？ TODO 这句话有歧义
 				if (isFactoryBean(beanName)) {
+					// FACTORY_BEAN_PREFIX = &，当 Bean 名称前面加 & 符号时，
+					// 获取的是产生 Bean 的工厂，而不是容器产生的 Bean。
+					// 调用 getBean 方法，触发容器对 Bean 实例化和依赖注入过程
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
+					// isEagerInit 表示是否需要预实例化
 					if (bean instanceof SmartFactoryBean<?> smartFactoryBean && smartFactoryBean.isEagerInit()) {
+						// 调用 getBean 方法，触发容器对 Bean 实例化和依赖注入过程
 						getBean(beanName);
 					}
 				}
@@ -954,6 +963,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		Assert.hasText(beanName, "Bean name must not be empty");
 		Assert.notNull(beanDefinition, "BeanDefinition must not be null");
 
+		// 校验解析的 BeanDefinition
 		if (beanDefinition instanceof AbstractBeanDefinition abd) {
 			try {
 				abd.validate();
@@ -1012,6 +1022,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 			if (hasBeanCreationStarted()) {
+				// 注册的过程中需要线程同步，以保证数据的一致性
 				// Cannot modify startup-time collection elements anymore (for stable iteration)
 				synchronized (this.beanDefinitionMap) {
 					this.beanDefinitionMap.put(beanName, beanDefinition);
@@ -1031,7 +1042,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			this.frozenBeanDefinitionNames = null;
 		}
 
+		// 检查是否有同名的 BeanDefinition 已经在 IoC 容器中
 		if (existingDefinition != null || containsSingleton(beanName)) {
+			// 重置所有已经注册过的 BeanDefinition 的缓存
 			resetBeanDefinition(beanName);
 		}
 		else if (isConfigurationFrozen()) {
@@ -1369,6 +1382,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				autowiredBeanNames.add(autowiredBeanName);
 			}
 			if (instanceCandidate instanceof Class) {
+				// 到这里开始调用 getBean，获取依赖
 				instanceCandidate = descriptor.resolveCandidate(autowiredBeanName, type, this);
 			}
 			Object result = instanceCandidate;
