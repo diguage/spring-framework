@@ -39,6 +39,7 @@ include "spring-websocket"
 include "framework-bom"
 include "framework-platform"
 include "integration-tests"
+include 'truman'
 
 rootProject.name = "spring"
 rootProject.children.each {project ->
@@ -59,3 +60,4 @@ settings.gradle.projectsLoaded {
 		}
 	}
 }
+

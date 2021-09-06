@@ -1,0 +1,64 @@
+[#common-interfaces-introduction]
+= 常用接口简介
+
+在单步调试 Spring 源代码过程中，D瓜哥发现，总有那么几个接口（含一些实现类）到处都想露个脸。第一个遇到时，也许会一头雾水，不知期所以然，跟着一步步跳下去，也许到最后就不知所踪了。D瓜哥觉得，有必要先介绍一些常用的接口，让大家有个影响，调试代码时，最起码不至于因为突然出现的类而茫然失措。
+
+这节，D瓜哥就先介绍一些常用的接口。
+
+TIP: 注意：这里只是简单介绍，后续代码分析中用到某些类，D瓜哥还会着重分析介绍的。
+
+`Advised`:: 切面
+`AopProxyFactory`:: 基类
+`Advisor`::
+`AopProxy`::
+`AliasRegistry`:: 管理别名的通用接口。同时，该类也是 `BeanDefinitionRegistry` 接口的父接口。
+`ApplicationContextAware`:: 当 `ApplicationContext` 运行时，实现该接口的类可以容器通知到。直白点说，就是可以把 `ApplicationContext` 对象设置到实现这个接口的类的对象中。
+`ApplicationContext`:: 这个大家最熟悉，常用它及其子类。该接口是为应用配置提供的集中接口。
+`ApplicationEventMulticaster`:: 应用事件监听器管理接口，并且可以将相关事件广播给所管理的监听器。
+`ApplicationEventPublisher`:: 包装时间发布功能的接口。
+`ApplicationEvent`:: 用于被所有应用事件扩展的抽象类。
+`ApplicationListener`:: 应用事件监听器接口。实现该接口，用于监听应用的某种事件。该接口继承了 `EventListener`。
+`AttributeAccessor`:: 用于从任意对象添加或者获取属性元数据的接口。
+`AutowireCandidateResolver`:: 自动注入候选解析器。
+`Aware`:: 标识接口，没有任何方法。实现其相关子接口的，可以被容器的相关框架对象以回调方式的方法来通知。以后遇到以该接口名结尾的接口，都可以认为它里面含有一个 Setter 方法。
+`BeanDefinitionDecorator`:: `BeanDefinition` 对象装饰器接口。
+`BeanDefinitionDocumentReader`:: XML 文档读取器，负责读取 XML 文档，具体解析则是交给 `BeanDefinitionParserDelegate` 来完成的。
+`BeanDefinitionParserDelegate`:: 解析 XML 的原元素，将其转化为 `BeanDefinition`。
+`BeanDefinitionParser`:: 自定义或者顶级 XML 元素（例如 `<beans/>`）处理器，负责将 XML 标签转化为 `BeanDefinition` 对象。
+`BeanDefinitionReader`:: Bean 定义读取器，负责从 `Resource` 或字符串中读取 Bean 定义。
+`BeanDefinitionRegistry`:: `BeanDefinition` 注册表，存放从 XML 解析出来的 `BeanDefinition`。
+`BeanDefinition`:: Spring 中表示 Bean 定义的基本数据结构，存放属性值、构造函数参数值等等。
++
+. `ROLE_INFRASTRUCTURE` 这些常量是什么鬼？
+`BeanFactoryAware`:: 提供一个 `setBeanFactory(BeanFactory beanFactory)` 方法，可以让实现该接口的类的对象能被设置自身所属的 `BeanFactory`。
+`BeanFactoryPostProcessor`:: `BeanFactory` 后置处理器。可以修改应用上下文中的 Bean。
+`BeanFactory`:: Spring Bean 容器的最基础接口，提供容器最基本的操作。
+`BeanPostProcessor`::
+`BeanWrapper`::
+`ConversionService`::
+`ConverterRegistry`::
+`DisposableBean`::
+`Environment`::
+`EventListener`:: 事件监听器标识接口。没有任何方法，只是用于表示其子类是事件监听器。
+`FactoryBean`::
+`InstantiationStrategy`:: 负责创建与 `RootBeanDefinition` 定义相对应实例的接口。提取出来，方便改变不同的创建方式。
+`LifecycleProcessor`::
+`Lifecycle`::
+`MessageSourceAware`::
+`MessageSource`::
+`MutablePropertyValues`::
+`NamespaceHandler`::
+`ParserContext`::
+`PropertyAccessor`::
+`PropertyEditorRegistrar`::
+`PropertyEditorRegistry`::
+`PropertyEditor`::
+`PropertyResolver`::
+`PropertySources`::
+`PropertyValue`::
+`PropertyValues`::
+`ResolvableType`::
+`ResourceLoaderAware`::
+`ResourceLoader`::
+`Resource`::
+`TypeConverter`::

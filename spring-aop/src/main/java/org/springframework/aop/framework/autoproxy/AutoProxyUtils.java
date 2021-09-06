@@ -52,7 +52,7 @@ public abstract class AutoProxyUtils {
 	 * @since 4.2.3
 	 * @see #determineTargetClass
 	 */
-	public static final String ORIGINAL_TARGET_CLASS_ATTRIBUTE =
+	public static final String ORIGINAL_TARGET_CLASS_ATTRIBUTE = // ??
 			Conventions.getQualifiedAttributeName(AutoProxyUtils.class, "originalTargetClass");
 
 
@@ -112,6 +112,7 @@ public abstract class AutoProxyUtils {
 			ConfigurableListableBeanFactory beanFactory, @Nullable String beanName, Class<?> targetClass) {
 
 		if (beanName != null && beanFactory.containsBeanDefinition(beanName)) {
+			// 设置这个属性有何用户？
 			beanFactory.getMergedBeanDefinition(beanName).setAttribute(ORIGINAL_TARGET_CLASS_ATTRIBUTE, targetClass);
 		}
 	}
