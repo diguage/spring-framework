@@ -1,0 +1,79 @@
+name: Deploy GitHub Pages
+on:
+  push:
+    branches:
+      - analysis
+jobs:
+  deploy-gh-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+        with:
+          ref: analysis
+          persist-credentials: false
+
+      - name: Set up JDK ☕️
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Graphviz 🐰
+        run: |
+          sudo apt update -y -m
+          sudo apt install -y graphviz
+
+      - name: Build 🔧
+        continue-on-error: true
+        run: ./gradlew :truman:asciidoctor
+
+      - name: Custom Code Style 🐦
+        run: |
+          sudo apt install -y sed
+          sed -i 's/<\/head>/<style>p>code{color: #d14 !important;background-color: #f5f5f5 !important;border: 1px solid #e1e1e8;white-space: nowrap;border-radius: 3px;}<\/style>\n<\/head>/' truman/build/docs/asciidoc/index.html
+
+      - name: Setup Node.js 🕸
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Compress Style 🍭
+        run: |
+          npm install cssnano-cli --global
+          cd truman/build/docs/asciidoc/css
+          for f in `ls *.css`;
+          do
+               fn="${f%.*}.min.css";
+               cssnano $f $fn;
+               rm -rf $f;
+               mv $fn $f
+          done
+
+      - name: Compress HTML 🦄
+        run: |
+          npm install html-minifier --global
+          cd truman/build/docs/asciidoc
+          echo '{"caseSensitive":true,
+                 "collapseBooleanAttributes":true,
+                 "keepClosingSlash":true,
+                 "processConditionalComments":true,
+                 "removeComments":true,
+                 "removeEmptyAttributes":true,
+                 "removeRedundantAttributes":true,
+                 "removeScriptTypeAttributes":true,
+                 "removeStyleLinkTypeAttributes":true,
+                 "sortAttributes":true,
+                 "sortClassName":true,
+                 "useShortDoctype":true}' >> html-minifier.config.json
+          html-minifier -c html-minifier.config.json index.html -o index.min.htm
+          rm -rf *.html .asciidoctor
+          mv index.min.htm index.html
+
+      - name: Deploy 🚀
+        continue-on-error: true
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: dgh-pages # The branch the action should deploy to.
+          folder: truman/build/docs/asciidoc # The folder the action should deploy.
+          single-commit: true

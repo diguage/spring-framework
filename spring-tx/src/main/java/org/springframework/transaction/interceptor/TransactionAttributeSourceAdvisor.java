@@ -37,6 +37,8 @@ import org.springframework.util.Assert;
  * @see #setTransactionInterceptor
  * @see TransactionProxyFactoryBean
  */
+// TransactionAttributeSourceAdvisor 的父类是 PointcutAdvisor，
+// 所以在目标方法判断的时候，会取出切点信息 pca.getPointcut()。
 @SuppressWarnings("serial")
 public class TransactionAttributeSourceAdvisor extends AbstractPointcutAdvisor {
 
@@ -47,6 +49,7 @@ public class TransactionAttributeSourceAdvisor extends AbstractPointcutAdvisor {
 		@Override
 		@Nullable
 		protected TransactionAttributeSource getTransactionAttributeSource() {
+			// 实现父类的方法，在子类中进行了扩展，返回之前在标签注册时的AnnotationTransactionAttributeSource
 			return (transactionInterceptor != null ? transactionInterceptor.getTransactionAttributeSource() : null);
 		}
 	};

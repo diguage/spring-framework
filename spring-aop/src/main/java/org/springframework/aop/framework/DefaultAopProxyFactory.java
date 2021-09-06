@@ -52,9 +52,15 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 	private static final long serialVersionUID = 7930414337282325166L;
 
 
+  // tag::createAopProxy[]
 	@Override
 	public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
+		// 如果实现接口，默认采用Java动态代理
+		// 如果没有接口，或者有接口却强制使用 cglib
 		if (!NativeDetector.inNativeImage() &&
+				// optimize 是否实用激进的优化策略
+				// proxyTargetClass 为 true，则代理类本身而不是接口
+				// 是否存在代理接口
 				(config.isOptimize() || config.isProxyTargetClass() || hasNoUserSuppliedProxyInterfaces(config))) {
 			Class<?> targetClass = config.getTargetClass();
 			if (targetClass == null) {
@@ -70,6 +76,7 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 			return new JdkDynamicAopProxy(config);
 		}
 	}
+  // end::createAopProxy[]
 
 	/**
 	 * Determine whether the supplied {@link AdvisedSupport} has only the
