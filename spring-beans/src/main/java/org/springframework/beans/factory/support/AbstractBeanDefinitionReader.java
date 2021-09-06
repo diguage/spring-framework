@@ -109,6 +109,7 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 	}
 
 	/**
+	 * 设置 ResourceLoader 用于资源位置配置。
 	 * Set the ResourceLoader to use for resource locations.
 	 * If specifying a ResourcePatternResolver, the bean definition reader
 	 * will be capable of resolving resource patterns to Resource arrays.
@@ -147,6 +148,8 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 	}
 
 	/**
+	 * 设置读取 bean 定义信息时所需要的环境。
+	 *
 	 * Set the Environment to use when reading bean definitions. Most often used
 	 * for evaluating profile information to determine which bean definitions
 	 * should be read and which should be omitted.
@@ -186,6 +189,7 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 		return count;
 	}
 
+	// 重载方法，调用下面的 loadBeanDefinitions(String, Set<Resource>);方法
 	@Override
 	public int loadBeanDefinitions(String location) throws BeanDefinitionStoreException {
 		return loadBeanDefinitions(location, null);
@@ -207,6 +211,8 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 	 * @see #loadBeanDefinitions(org.springframework.core.io.Resource[])
 	 */
 	public int loadBeanDefinitions(String location, @Nullable Set<Resource> actualResources) throws BeanDefinitionStoreException {
+		// 获取在 IoC 容器初始化过程中设置的资源加载器
+		// 获取 ResourceLoader 对象
 		ResourceLoader resourceLoader = getResourceLoader();
 		if (resourceLoader == null) {
 			throw new BeanDefinitionStoreException(
@@ -216,7 +222,11 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 		if (resourceLoader instanceof ResourcePatternResolver) {
 			// Resource pattern matching available.
 			try {
+				// 将指定位置的 Bean 配置信息解析为 Spring IoC 容器封装的资源
+				// 加载多个指定位置的 Bean 配置信息
+				// 调用 DefaultResourceLoader 的 getResources 方法完成具体的 Resource 定位
 				Resource[] resources = ((ResourcePatternResolver) resourceLoader).getResources(location);
+				// 委派调用其子类 XmlBeanDefinitionReader 的方法，实现加载功能
 				int count = loadBeanDefinitions(resources);
 				if (actualResources != null) {
 					Collections.addAll(actualResources, resources);
@@ -233,7 +243,10 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 		}
 		else {
 			// Can only load single resources by absolute URL.
+			// 将指定位置的 Bean 配置信息解析为 Spring IoC 容器封装的资源
+			// 加载单个指定位置的 Bean 配置信息
 			Resource resource = resourceLoader.getResource(location);
+			// 委派调用其子类 XmlBeanDefinitionReader 的方法，实现加载功能
 			int count = loadBeanDefinitions(resource);
 			if (actualResources != null) {
 				actualResources.add(resource);
@@ -245,6 +258,7 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 		}
 	}
 
+	// 重载方法，调用 loadBeanDefinitions(String);
 	@Override
 	public int loadBeanDefinitions(String... locations) throws BeanDefinitionStoreException {
 		Assert.notNull(locations, "Location array must not be null");

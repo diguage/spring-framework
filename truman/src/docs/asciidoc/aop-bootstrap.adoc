@@ -1,0 +1,139 @@
+= 入门
+
+在上一篇文章 https://www.diguage.com/post/spring-aop-process-overview/[Spring AOP 处理流程概述^] 中，对 Spring AOP 有了一个整体认识。这篇文章就带大家做一个细致的源码分析。
+
+== 登堂入室
+
+使用 Spring AOP 也很简单，只需要在配置类上加上 `@EnableAspectJAutoProxy` 注解即可。这个注解处理过程与 https://www.diguage.com/post/spring-extensions-and-mybatis/#mapper-scan[Spring 扩展点实践：整合 MyBATIS^] 中 “`@MapperScan` 处理” 类似，不同的是，Spring AOP 注册了 `AnnotationAwareAspectJAutoProxyCreator`，它是一个 `InstantiationAwareBeanPostProcessor`。具体的类图如下：
+
+plantuml::{includedir}/puml/AnnotationAwareAspectJAutoProxyCreator.puml[{diagram_attr}]
+
+在正式开始源码分析之前，有一点必须强调一下：**Spring AOP 只是借用了 AspectJ 的一些注解和个别关键 API，而整体实现是 Spring 自己完成的，并不是基于 AspectJ 实现的。**这一点跟很多人的认识是不一样的，需要特别指出。
+
+D瓜哥在 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 中指出：创建 AOP 代理对象，有两个时机：
+
+. 调用 `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation` 时，通过调用 `AnnotationAwareAspectJAutoProxyCreator` 对象的 `postProcessBeforeInstantiation` 方法来创建对象；
+. 调用 `BeanPostProcessor#postProcessAfterInitialization` 时，通过调用 `AnnotationAwareAspectJAutoProxyCreator` 对象的 `postProcessAfterInitialization` 方法来创建对象；
+
+下面分别对这两个方法做更详细的介绍。
+
+== `AnnotationAwareAspectJAutoProxyCreator#postProcessBeforeInstantiation`
+
+`AnnotationAwareAspectJAutoProxyCreator` 的 `postProcessBeforeInstantiation` 方法是从 `AbstractAutoProxyCreator` 继承过来的。代码如下：
+
+[{java_src_attr}]
+----
+@Override
+public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
+  // 1、得到一个缓存的唯一key（根据beanClass和beanName生成唯一key）
+  Object cacheKey = getCacheKey(beanClass, beanName);
+
+  // 2、如果当前targetSourcedBeans（通过自定义TargetSourceCreator创建的TargetSource）不包含cacheKey
+  if (!StringUtils.hasLength(beanName) || !this.targetSourcedBeans.contains(beanName)) {
+    // 2.1、advisedBeans（已经被增强的Bean，即AOP代理对象）中包含当前cacheKey，返回null，即走Spring默认流程
+    if (this.advisedBeans.containsKey(cacheKey)) {
+        return null;
+    }
+    // 2.2、如果是基础设施类（如Advisor、Advice、AopInfrastructureBean的实现）不进行处理
+    // 2.2、shouldSkip 默认false，可以生成子类覆盖，如AspectJAwareAdvisorAutoProxyCreator覆盖（if (((AbstractAspectJAdvice) advisor.getAdvice()).getAspectName().equals(beanName)) return true;  即如果是自己就跳过）
+    if (isInfrastructureClass(beanClass) || shouldSkip(beanClass, beanName)) {
+        this.advisedBeans.put(cacheKey, Boolean.FALSE);
+        return null;
+    }
+  }
+
+  // Create proxy here if we have a custom TargetSource.
+  // Suppresses unnecessary default instantiation of the target bean:
+  // The TargetSource will handle target instances in a custom fashion.
+  // 3、开始创建AOP代理对象
+  // 3.1、配置自定义的TargetSourceCreator进行TargetSource创建
+  TargetSource targetSource = getCustomTargetSource(beanClass, beanName);
+  // 3.2、如果targetSource不为null 添加到targetSourcedBeans缓存，并创建AOP代理对象
+  if (targetSource != null) {
+    if (StringUtils.hasLength(beanName)) {
+        this.targetSourcedBeans.add(beanName);
+    }
+    // specificInterceptors即增强（包括前置增强、后置增强等等）
+    Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource);
+    //3.3、创建代理对象
+    Object proxy = createProxy(beanClass, beanName, specificInterceptors, targetSource);
+    //3.4、将代理类型放入proxyTypes从而允许后续的predictBeanType()调用获取
+    this.proxyTypes.put(cacheKey, proxy.getClass());
+    return proxy;
+  }
+
+  return null;
+}
+----
+
+请注意代码中语法高亮的两行代码：
+
+. `getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource)` 获取了所有符合条件的增强信息。
+. `createProxy(beanClass, beanName, specificInterceptors, targetSource)` 创建了代理对象。
+
+== `AnnotationAwareAspectJAutoProxyCreator#postProcessAfterInitialization`
+
+在 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述] 中已经强调过了：绝大部分的 AOP 代理生成都是在 `postProcessAfterInitialization` 方法中完成的。来看一下这个方法：
+
+[{java_src_attr},highlight=7]
+----
+public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
+  if (bean != null) {
+    //根据给定的bean的class和name构建出个key，格式：beanClassName_beanName
+    Object cacheKey = getCacheKey(bean.getClass(), beanName);
+    if (this.earlyProxyReferences.remove(cacheKey) != bean) {
+        // 使用动态代理技术，产生代理对象
+        return wrapIfNecessary(bean, beanName, cacheKey);
+    }
+  }
+  return bean;
+}
+----
+
+`postProcessAfterInitialization` 方法很简单，直接把处理代码委托给了 `wrapIfNecessary(bean, beanName, cacheKey)` 方法来处理。来看一下这个方法：
+
+[{java_src_attr},highlight=19;25-26]
+----
+protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+  // 已经处理过的
+  if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
+    return bean;
+  }
+  if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
+    return bean;
+  }
+  // 基础设施类，或者不需要代理的类，则跳过
+  // Advice/Pointcut/Advisor/AopInfrastructureBean接口的beanClass不进行代理以及对beanName为aop内的切面名也不进行代理
+  // 所谓基础设施类，就是 AOP 相关的注解以及这些注解标识的类
+  if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
+    this.advisedBeans.put(cacheKey, Boolean.FALSE);
+    return bean;
+  }
+
+  // Create proxy if we have advice.
+  // 查找对代理类相关的advisor对象集合，此处就与point-cut表达式有关了
+  Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+  // 如果存在增强方法，则创建代理
+  // 对相应的advisor不为空才采取代理
+  if (specificInterceptors != DO_NOT_PROXY) {
+    this.advisedBeans.put(cacheKey, Boolean.TRUE);
+    // 创建代理
+    Object proxy = createProxy(
+        bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+    // 放入代理类型缓存
+    this.proxyTypes.put(cacheKey, proxy.getClass());
+    return proxy;
+  }
+
+  this.advisedBeans.put(cacheKey, Boolean.FALSE);
+  return bean;
+}
+----
+
+通过对 `wrapIfNecessary` 分析，我们可以看出，核心处理也就是两个操作：
+
+. `getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource)` 获取了所有符合条件的增强信息。
+. `createProxy(beanClass, beanName, specificInterceptors, targetSource)` 创建了代理对象。
+
+这和 `postProcessBeforeInstantiation` 方法中的处理就一样了。经过千山万水，终于成功在延安胜利会师。下一篇文章 https://www.diguage.com/post/spring-aop-get-advices/[Spring AOP 源码分析：获得通知]，重点介绍一下如何获取通知。
+
