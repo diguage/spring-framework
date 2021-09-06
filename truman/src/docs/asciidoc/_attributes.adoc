@@ -1,0 +1,14 @@
+:truman_src_dir: {includedir}/../../main/java/com/diguage/truman
+:truman_resource_dir: {includedir}/../../main/resources/com/diguage/truman
+
+:core_src_dir: {includedir}/../../../../spring-core/src/main/java/org/springframework
+
+:context_src_dir: {includedir}/../../../../spring-context/src/main/java/org/springframework
+
+:aop_src_dir: {includedir}/../../../../spring-aop/src/main/java/org/springframework/aop
+
+:beans_src_dir: {includedir}/../../../../spring-beans/src/main/java/org/springframework/beans
+
+:jdbc_src_dir: {includedir}/../../../../spring-jdbc/src/main/java/org/springframework/jdbc
+
+:tx_src_dir: {includedir}/../../../../spring-tx/src/main/java/org/springframework/tx
