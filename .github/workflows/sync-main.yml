@@ -1,0 +1,39 @@
+on:
+  schedule:
+    - cron:  '0 4 * * *'
+    # scheduled at 04:00 everyday
+
+  workflow_dispatch:  # click the button on Github repo!
+
+
+jobs:
+  sync-with-upstream:
+    runs-on: ubuntu-latest
+    name: Sync main with upstream latest
+
+    steps:
+      # Step 1: run a standard checkout action, provided by github
+      - name: Checkout 🛎️
+        uses: actions/checkout@v2.3.4
+        with:
+          ref: main
+
+      # Step 2: run this sync action - specify the upstream repo,
+      #         upstream branch to sync with, and target sync branch
+      - name: Fork Sync With Upstream 😘
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v2.3
+        with:
+          upstream_repository: spring-projects/spring-framework
+          upstream_branch: main
+          target_branch: main
+          git_pull_args: --ff-only   # optional arg use, defaults to simple 'pull'
+
+      # Step 3: Display a message if 'sync' step had new commits (simple test)
+      - name: Check for new commits 🎉
+        if: steps.sync.outputs.has_new_commits
+        run: echo "There were new commits."
+
+      # Step 4: Print a helpful timestamp for your records (not required, just nice)
+      - name: Timestamp ✌️
+        run: date

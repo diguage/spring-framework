@@ -134,6 +134,7 @@ final class AttributeMethods {
 		for (int i = 0; i < size(); i++) {
 			if (canThrowTypeNotPresentException(i)) {
 				try {
+					// 方法一下有什么意义？ TODO
 					get(i).invoke(annotation);
 				}
 				catch (Throwable ex) {

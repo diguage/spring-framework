@@ -1,0 +1,20 @@
+@startuml
+
+skinparam titleFontSize 30
+title **BeanDefinitionReader 继承体系**
+
+interface BeanDefinitionReader
+abstract class AbstractBeanDefinitionReader
+class PropertiesBeanDefinitionReader
+class GroovyBeanDefinitionReader
+class XmlBeanDefinitionReader
+
+BeanDefinitionReader <|.. AbstractBeanDefinitionReader
+AbstractBeanDefinitionReader <|-- PropertiesBeanDefinitionReader
+AbstractBeanDefinitionReader <|-- GroovyBeanDefinitionReader
+AbstractBeanDefinitionReader <|-- XmlBeanDefinitionReader
+
+skinparam footerFontSize 20
+footer ''地瓜哥''博客网 · https://www.diguage.com · 出品
+
+@enduml

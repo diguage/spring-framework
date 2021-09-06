@@ -253,6 +253,7 @@ class ConfigurationClassParser {
 		this.configurationClasses.put(configClass, configClass);
 	}
 
+  // tag::doProcessConfigurationClass[]
 	/**
 	 * Apply processing and build a complete {@link ConfigurationClass} by reading the
 	 * annotations, members and methods from the source class. This method can be called
@@ -344,6 +345,7 @@ class ConfigurationClassParser {
 		// No superclass -> processing is complete
 		return null;
 	}
+  // end::doProcessConfigurationClass[]
 
 	/**
 	 * Register member (nested) classes that happen to be configuration classes themselves.
@@ -512,6 +514,7 @@ class ConfigurationClassParser {
 	}
 
 
+  // tag::getImports[]
 	/**
 	 * Returns {@code @Import} class, considering all meta-annotations.
 	 */
@@ -521,7 +524,9 @@ class ConfigurationClassParser {
 		collectImports(sourceClass, imports, visited);
 		return imports;
 	}
+  // end::getImports[]
 
+  // tag::collectImports[]
 	/**
 	 * Recursively collect all declared {@code @Import} values. Unlike most
 	 * meta-annotations it is valid to have several {@code @Import}s declared with
@@ -548,6 +553,7 @@ class ConfigurationClassParser {
 			imports.addAll(sourceClass.getAnnotationAttributes(Import.class.getName(), "value"));
 		}
 	}
+  // end::collectImports[]
 
 	private void processImports(ConfigurationClass configClass, SourceClass currentSourceClass,
 			Collection<SourceClass> importCandidates, Predicate<String> exclusionFilter,
