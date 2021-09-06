@@ -1,0 +1,115 @@
+name: Deploy GitHub Pages
+on:
+  push:
+    branches:
+      - analysis
+jobs:
+  deploy-gh-pages:
+    runs-on: ubuntu-latest
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+        with:
+          ref: analysis
+          persist-credentials: false
+
+      # https://github.com/actions/setup-java
+      - name: Set up JDK ☕️
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # https://github.com/actions/setup-node
+      - name: Setup Node.js 🕸
+        uses: actions/setup-node@v3
+        with:
+          # https://github.com/nvm-sh/nvm#long-term-support
+          node-version: 'lts/*'
+
+      - name: Install Graphviz 🐰
+        run: |
+          sudo apt update -y -m
+          sudo apt install -y python3-pip
+          # https://graphviz.org/
+          sudo apt install -y graphviz
+          # http://blockdiag.com/en/seqdiag/index.html
+          pip3 install seqdiag
+          # http://blockdiag.com/en/blockdiag/index.html
+          pip3 install blockdiag
+          # http://blockdiag.com/en/actdiag/index.html
+          pip3 install actdiag
+          # http://blockdiag.com/en/nwdiag/index.html
+          pip3 install nwdiag
+          # https://github.com/Deep-Symmetry/bytefield-svg
+          npm install -g bytefield-svg
+          # https://github.com/gtudan/bpmn-js-cmd
+          npm install -g bpmn-js-cmd
+
+      - name: Install font 🎃
+        run: |
+          mkdir $HOME/.fonts
+          cd $HOME/.fonts
+          wget https://github.com/diguage/open-fonts/releases/download/latest/SourceHanSerifSC-Regular.otf
+          wget https://github.com/diguage/open-fonts/releases/download/latest/SourceHanSansSC-Regular.otf
+          wget https://github.com/diguage/open-fonts/releases/download/latest/SourceCodePro-Regular.otf
+          wget https://github.com/diguage/open-fonts/releases/download/latest/SourceCodePro-It.otf
+          wget https://github.com/diguage/open-fonts/releases/download/latest/SourceCodePro-Bold.otf
+          wget https://github.com/diguage/open-fonts/releases/download/latest/SourceCodePro-BoldIt.otf
+          echo -e "[seqdiag]\nfontpath = $HOME/.fonts/SourceHanSerifSC-Regular.otf" > $HOME/.blockdiagrc
+          echo -e "\n[blockdiag]\nfontpath = $HOME/.fonts/SourceHanSerifSC-Regular.otf" >> $HOME/.blockdiagrc
+          echo -e "\n[actdiag]\nfontpath = $HOME/.fonts/SourceHanSerifSC-Regular.otf" >> $HOME/.blockdiagrc
+          echo -e "\n[nwdiag]\nfontpath = $HOME/.fonts/SourceHanSerifSC-Regular.otf" >> $HOME/.blockdiagrc
+          # Check result
+          ls -lh $HOME/.fonts 
+          cat $HOME/.blockdiagrc
+
+      - name: Build 🔧
+        continue-on-error: true
+        run: ./gradlew :truman:asciidoctor
+
+      - name: Custom Code Style 🐦
+        run: |
+          sudo apt install -y sed
+          sed -i 's/<\/head>/<style>p>code{color: #d14 !important;background-color: #f5f5f5 !important;border: 1px solid #e1e1e8;white-space: nowrap;border-radius: 3px;}<\/style>\n<\/head>/' truman/build/docs/html5/index.html
+
+      - name: Compress Style 🍭
+        run: |
+          npm install cssnano-cli --global
+          cd truman/build/docs/html5/css
+          for f in `ls *.css`;
+          do
+               fn="${f%.*}.min.css";
+               cssnano $f $fn;
+               rm -rf $f;
+               mv $fn $f
+          done
+
+      - name: Compress HTML 🦄
+        run: |
+          npm install html-minifier --global
+          cd truman/build/docs/html5
+          echo '{"caseSensitive":true,
+                 "collapseBooleanAttributes":true,
+                 "keepClosingSlash":true,
+                 "processConditionalComments":true,
+                 "removeComments":true,
+                 "removeEmptyAttributes":true,
+                 "removeRedundantAttributes":true,
+                 "removeScriptTypeAttributes":true,
+                 "removeStyleLinkTypeAttributes":true,
+                 "sortAttributes":true,
+                 "sortClassName":true,
+                 "useShortDoctype":true}' >> html-minifier.config.json
+          html-minifier -c html-minifier.config.json index.html -o index.min.htm
+          rm -rf *.html .asciidoctor
+          mv index.min.htm index.html
+
+      - name: Deploy 🚀
+        continue-on-error: true
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: dgh-pages # The branch the action should deploy to.
+          folder: truman/build/docs/html5 # The folder the action should deploy.
+          single-commit: true

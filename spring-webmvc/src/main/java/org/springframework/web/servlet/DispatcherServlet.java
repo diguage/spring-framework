@@ -66,6 +66,9 @@ import org.springframework.web.util.ServletRequestPathUtils;
 import org.springframework.web.util.WebUtils;
 
 /**
+ * DispatcherServlet 是 SpringMVC 中的前端控制器(Front Controller),
+ * 负责接收 Request 并将 Request 转发给对应的处理组件。<p/>
+ *
  * Central dispatcher for HTTP request handlers/controllers, e.g. for web UI controllers
  * or HTTP-based remote service exporters. Dispatches to registered handlers for processing
  * a web request, providing convenient mapping and exception handling facilities.
@@ -502,14 +505,23 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * <p>May be overridden in subclasses in order to initialize further strategy objects.
 	 */
 	protected void initStrategies(ApplicationContext context) {
+		// 1. 多文件上传组件
 		initMultipartResolver(context);
+		// 2. 初始化本地语言环境
 		initLocaleResolver(context);
+		// 3. 初始化模板处理器
 		initThemeResolver(context);
+		// 4. 初始化 HandlerMapping
 		initHandlerMappings(context);
+		// 5. 初始化参数适配器
 		initHandlerAdapters(context);
+		// 6. 初始化异常拦截器
 		initHandlerExceptionResolvers(context);
+		// 7. 初始化视图预处理器
 		initRequestToViewNameTranslator(context);
+		// 8. 初始化视图转换器
 		initViewResolvers(context);
+		// 9. 初始化 Flash 管理器
 		initFlashMapManager(context);
 	}
 

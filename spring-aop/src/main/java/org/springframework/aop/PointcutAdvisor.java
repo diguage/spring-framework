@@ -17,6 +17,12 @@
 package org.springframework.aop;
 
 /**
+ * `PointcutAdvisor` 才是真正的定义一个 `Pointcut` 和一个 `Advice` 的 `Advisor`。
+ *
+ * `DefaultPointcutAdvisor` 是最通用的 `PointcutAdvisor` 实现。
+ *
+ * `NameMatchMethodPointcutAdvisor` 是细化后的 `DefaultPointcutAdvisor`。
+ *
  * Superinterface for all Advisors that are driven by a pointcut.
  * This covers nearly all advisors except introduction advisors,
  * for which method-level matching doesn't apply.

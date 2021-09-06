@@ -9252,7 +9252,7 @@ The following example shows part of a sample `system-test-config.xml` file:
 	</beans>
 ----
 
-The following example shows a possible `jdbc.properties` file:
+The following example shows a possible `token.properties` file:
 
 [literal,subs="verbatim,quotes"]
 ----
@@ -11276,7 +11276,7 @@ you need to call its `postProcessBeanFactory` method, as the following example s
 
 	// bring in some property values from a Properties file
 	val cfg = PropertySourcesPlaceholderConfigurer()
-	cfg.setLocation(FileSystemResource("jdbc.properties"))
+	cfg.setLocation(FileSystemResource("token.properties"))
 
 	// now actually do the replacement
 	cfg.postProcessBeanFactory(factory)

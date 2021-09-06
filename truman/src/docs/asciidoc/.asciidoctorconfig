@@ -1,0 +1,36 @@
+// this adds attributes to every preview being rendered in IntelliJ
+// for more information see:
+// https://intellij-asciidoc-plugin.ahus1.de/docs/users-guide/features/advanced/asciidoctorconfig-file.html
+
+//:pdf-fontsdir: {asciidoctorconfigdir}/../cfg/fonts
+//:pdf-stylesdir: {asciidoctorconfigdir}/../cfg/theme
+//:pdf-theme: Source
+
+:icons: font
+
+:includedir: .
+
+:source_attr: linenums,indent=0,subs="attributes,verbatim"
+:java_src_attr: source%nowrap,java,{source_attr}
+:xml_src_attr: source%nowrap,xml,{source_attr}
+
+:image_attr: align="center",width=100%
+:diagram_attr: format=svg,{image_attr}
+
+include::_attributes.adoc[]
+
+:truman_src_dir: {includedir}/../../main/java/com/diguage/truman
+:truman_resource_dir: {includedir}/../../main/resources/com/diguage/truman
+
+:core_src_dir: {includedir}/../../../../spring-core/src/main/java/org/springframework
+
+:context_src_dir: {includedir}/../../../../spring-context/src/main/java/org/springframework
+
+:aop_src_dir: {includedir}/../../../../spring-aop/src/main/java/org/springframework/aop
+
+:beans_src_dir: {includedir}/../../../../spring-beans/src/main/java/org/springframework/beans
+
+:jdbc_src_dir: {includedir}/../../../../spring-jdbc/src/main/java/org/springframework/jdbc
+
+:tx_src_dir: {includedir}/../../../../spring-tx/src/main/java/org/springframework
+

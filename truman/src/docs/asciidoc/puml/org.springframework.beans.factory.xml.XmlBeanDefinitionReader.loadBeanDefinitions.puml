@@ -1,0 +1,53 @@
+@startuml
+title **XmlBeanDefinitionReader.loadBeanDefinitions(Resource) 函数执行时序图**
+
+
+autonumber
+
+participant xmlBeanFactory <<XmlBeanFactory>>
+participant xmlBeanDefinitionReader <<XmlBeanDefinitionReader>>
+participant encodedResource <<EncodedResource>>
+participant resource <<Resource>>
+participant inputSource <<InputSource>>
+
+
+xmlBeanFactory -> xmlBeanDefinitionReader : loadBeanDefinition(resource)
+activate xmlBeanDefinitionReader
+
+    xmlBeanDefinitionReader -> encodedResource : new EncodedResource(resource)
+    activate encodedResource
+    xmlBeanDefinitionReader <- encodedResource : encodedResource:EncodedResource
+    deactivate encodedResource
+
+    xmlBeanDefinitionReader -> xmlBeanDefinitionReader : loadBeanDefinitions(encodedResource)
+    activate xmlBeanDefinitionReader
+
+        xmlBeanDefinitionReader -> encodedResource : getResource()
+        activate encodedResource
+        xmlBeanDefinitionReader <-- encodedResource : resource:Resource
+        deactivate encodedResource
+
+        xmlBeanDefinitionReader -> resource : getInputStream()
+        activate resource
+        xmlBeanDefinitionReader <- resource : inputStream:InputStream
+        deactivate resource
+
+        xmlBeanDefinitionReader -> inputSource : new InputSource(inputStream)
+        activate inputSource
+        xmlBeanDefinitionReader <- inputSource : inputSource:InputSource
+        deactivate inputSource
+
+        xmlBeanDefinitionReader -> xmlBeanDefinitionReader : doLoadBeanDefinitions(inputSource, encodedResource.getResource())
+        activate xmlBeanDefinitionReader
+        xmlBeanDefinitionReader --> xmlBeanDefinitionReader : loadedBeanDefinitionNum:int
+        deactivate xmlBeanDefinitionReader
+
+    xmlBeanDefinitionReader <- xmlBeanDefinitionReader : loadedBeanDefinitionNum:int
+    deactivate xmlBeanDefinitionReader
+
+xmlBeanFactory <- xmlBeanDefinitionReader : loadedBeanDefinitionNum:int
+deactivate xmlBeanDefinitionReader
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

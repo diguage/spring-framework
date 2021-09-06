@@ -1,0 +1,106 @@
+@startuml
+skinparam defaultMonospacedFontName Source Code Pro
+skinparam sequenceMessageAlign direction
+
+title **AbstractApplicationContext.refresh 重塑容器流程**
+
+actor Actor
+participant AbstractApplicationContext << (C,#ADD1B2) >>
+participant BeanFactoryPostProcessor << (I,#AB9DE1) >>
+
+Actor -> AbstractApplicationContext: ""refresh""\n重塑容器
+activate AbstractApplicationContext
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""prepareRefresh""\n准备环境
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""obtainFreshBeanFactory""\n获取BeanFactory
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""prepareBeanFactory""\n准备 ""BeanFactory""
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""postProcessBeanFactory""\n对 ""BeanFactory"" 做后期处理
+  note right
+  预留扩展点，
+  目前是空实现
+  end note
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""invokeBeanFactoryPostProcessors""\n调用 ""BeanFactoryPostProcessor"" 的 \n""postProcessBeanFactory"" 方法
+  activate AbstractApplicationContext #53E516
+
+    loop **遍历所有 ""BeanFactoryPostProcessor"" 实例**
+      AbstractApplicationContext -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n更新容器内 Bean 的定义（增加、删除、修改）
+      activate BeanFactoryPostProcessor
+      note left
+      这是 Spring 容器中
+      非常重要的扩展点！
+      end note
+
+      |||
+
+      AbstractApplicationContext <- BeanFactoryPostProcessor: 完成 Bean 定义的更新
+      deactivate BeanFactoryPostProcessor
+    end
+
+  AbstractApplicationContext -> AbstractApplicationContext
+  deactivate AbstractApplicationContext
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""registerBeanPostProcessors""\n注册 ""BeanPostProcessor""
+  note right
+  ""BeanPostProcessor""
+  是 Spring 非常重要的扩展点！
+  end note
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""initMessageSource""\n初始化 ""MessageSource""
+  note right
+  国际化相关
+  end note
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""initApplicationEventMulticaster""\n初始化应用事件广播器
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""onRefresh""
+  note right
+  在 Web 容器中，注册
+  ""DispatchServlet"" 九大组件
+  end note
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""registerListeners""\n注册事件监听器
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""finishBeanFactoryInitialization""\n完成预初始化
+  note right
+  完成非懒加载的
+  单例 Bean 实例化
+  end note
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""finishRefresh""\n完成重塑
+  note right
+  删除一些不必要的配置信息
+  end note
+
+  |||
+
+Actor <- AbstractApplicationContext: 完成容器初始化
+deactivate AbstractApplicationContext
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml
