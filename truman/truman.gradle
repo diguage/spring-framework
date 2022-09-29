@@ -20,9 +20,9 @@ dependencies {
     implementation('org.projectlombok:lombok:1.18.24')
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
 
-    implementation group: 'com.zaxxer', name: 'HikariCP', version: '4.0.3'
-    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.29'
-    implementation group: 'org.mybatis', name: 'mybatis', version: '3.5.10'
+    implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.30'
+    implementation group: 'org.mybatis', name: 'mybatis', version: '3.5.11'
     implementation group: 'org.mybatis', name: 'mybatis-spring', version: '2.0.7'
 
     providedCompile("jakarta.servlet:jakarta.servlet-api:6.0.0")
@@ -31,8 +31,8 @@ dependencies {
 //    // TODO 加了下面的依赖不报错了。新问题：明明没有使用 Kotlinx，为啥却要加这个依赖？
 //    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
 
-    jmh 'org.openjdk.jmh:jmh-core:1.33'
-    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.33'
+    jmh 'org.openjdk.jmh:jmh-core:1.35'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.35'
     jmh 'net.sf.jopt-simple:jopt-simple:5.0.4'
 
     implementation("org.slf4j:slf4j-api")
@@ -47,6 +47,16 @@ dependencies {
     implementation("org.mockito:mockito-core")
     implementation("org.mockito:mockito-junit-jupiter")
     implementation("org.assertj:assertj-core")
+
+    implementation platform("org.apache.dubbo:dubbo-bom:3.1.0")
+    implementation("org.apache.dubbo:dubbo-registry-multicast")
+    implementation("org.apache.dubbo:dubbo-registry-zookeeper")
+    implementation("org.apache.dubbo:dubbo-configcenter-zookeeper")
+    implementation("org.apache.dubbo:dubbo-metadata-report-zookeeper")
+    implementation("org.apache.dubbo:dubbo-rpc-dubbo")
+    implementation("org.apache.dubbo:dubbo-config-spring")
+    implementation("org.apache.dubbo:dubbo-remoting-netty4")
+    implementation("org.apache.dubbo:dubbo-serialization-hessian2")
 }
 
 //sourceSets {
