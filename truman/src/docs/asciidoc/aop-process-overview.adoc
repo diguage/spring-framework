@@ -1,0 +1,75 @@
+= AOP 处理流程概述
+
+AOP 是 Spring 框架的最核心的两个功能之一，在前面的 https://www.diguage.com/post/spring-startup-process-overview/[Spring 启动流程概述^] 和 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 两篇文章中，分别介绍了 Spring 启动过程和 Spring Bean 的生命周期，对 IoC 有了一个细致介绍。这里来细致分析一下 Spring AOP 的实现原理和处理流程。
+
+== 基本概念
+
+先来了解几个基本概念，D瓜哥私以为这些概念是 AOP 中最核心的内容，了解了基本概念，可以说基本上掌握了一半的 AOP 内容。
+
+学习概念最权威的地方，当然就是官方文档。所以，这些概念可以在 https://docs.spring.io/spring/docs/current/spring-framework-reference/core.html#aop-introduction-defn[Spring Framework Documentation: AOP Concepts^] 中看到最权威的介绍。
+
+. **Join point(连接点)**: 所谓的连接点是指那些被拦截到的点。在 Spring 中，连接点指的是方法，因为 Spring 只支持方法类型的连接点。在 Spring 中，使用 
+. **Pointcut(切入点)**: 所谓的切入点，是指要对哪些 *Join point(连接点)* 进行拦截的定义。如果 Join point(连接点) 是全集，那么 Pointcut(切入点) 就是被选中的子集。写 AOP 代码的时候，一般是用 Pointcut(切入点) 表达式进行对 Join point(连接点) 进行选择。
+. **Advice(通知/增强)**: 所谓的通知就是指拦截到 Join point(连接点) 之后所要做的事情。通知根据作用位置不同，又细分为：
+.. **Before advice(前置通知)**: 在 Join point(连接点) 之前运行的通知。这种通知，不能阻止执行流程继续到 Join point(连接点)。
+.. **After returning advice(后置通知)**: 在 Join point(连接点) 之后运行的通知。当然，如果在 Join point(连接点) 执行过程中，抛出异常，则可能就不执行了。
+.. **After throwing advice(异常通知)**: 方法抛出异常后，将会执行的通知。
+.. **After (finally) advice(最终通知)**: 无论如何都会执行的通知，即使抛出异常。
+.. **Around advice(环绕通知)**: 围绕在 Join point(连接点) 的通知，方法执行前和执行后，都可以执行自定义行为。同时，也可以决定是返回 Join point(连接点) 的返回值，还是返回自定义的返回值。
+. **Aspect(切面)**: 是切入点和通知的结合。
+. **Advisor(通知器/顾问)**: 和 Aspect(切面) 很相似。
+. **Introduction(引介)**: 引介是一种特殊的通知在不修改类代码的前提下，Introduction 可以在运行期为类动态地添加一些方法或属性。
+. **Target object(目标对象)**: 代理的目标对象。
+. **AOP proxy(代理)**: 一个类被AOP织入增强后，就产生一个结果代理类。
+. **Weaving(织入)**: 是指把增强应用到目标对象来创建新的代理对象的过程。**Spring 是通过实现后置处理器 `BeanPostProcessor` 接口来实现织入的。**也就是在 Bean 完成初始化之后，通过给目标对象生成代理对象，并交由 Spring IoC 容器来接管，这样再去容器中获取到的目标对象就是已经增强过的代理对象。
+
+一图胜千言，通过下面的图来总结一下，希望能够帮助读者记忆。
+
+image::images/aop-concepts.png[{image_attr},title="AOP 基本概念",alt="AOP 基本概念"]
+
+== 实现原理
+
+Spring AOP 的实现原理说起来只有一句话：如果使用接口，则用 JDK 的动态代理实现；如果没有实现接口，则使用 CGLIB 通过字节码技术来实现。如图：
+
+image::images/aop-principle.png[{image_attr},title="AOP 实现原理",alt="AOP 实现原理"]
+
+JDK 的动态代理和 CGLIB 字节码技术在实现上也略有不同。如图：
+
+image::images/spring-aop-process.png[{image_attr},title="AOP 实现原理：JDK vs CGLIB",alt="AOP 实现原理：JDK vs CGLIB"]
+
+关于动态代理，D瓜哥有篇文章还在酝酿，稍后发布出来，再详细介绍。
+
+// == 加载配置
+
+== AOP 织入流程
+
+在 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 中介绍的 Spring Bean 声明周期流程，再结合上面提到的实现原理，如果让你设计一个 AOP 功能，你会怎么设计？
+
+大家想一想，AOP 的三要素是什么？无非就是：① Target object(目标对象)，解决增强的作用对象问题；② Pointcut(切入点)，解决在哪里增强的问题；③ Advice(通知/增强)，解决怎么争强的问题。到这里，思路应该比较清晰了：
+
+* 第一步：创建实例对象
+* 第二步：提取切面信息，包括 Pointcut(切入点)、Advice(通知/增强)。
+* 第三步：判断实例对象是否符合 Pointcut(切入点) 的选择条件；如果符合，执行下一步；否则直接跳过。
+* 第四步：创建代理，在 Target object(目标对象) 的  Pointcut(切入点) 上，Weaving(织入) Advice(通知/增强) 操作。
+
+很多人以为这就完事了，以后方法调用直接执行增强、执行原始方法就完事了。其实，并不是这样的。如下图：
+
+image::images/aspects-applied-process.jpg[{image_attr},title="Aspect 应用流程",alt="Aspect 应用流程"]
+
+经过前面四步处理后，**Spring 把 Target object(目标对象) 和 Advice(通知/增强) 编织在一起后，再调用代理对象的方法，代理对象就会把调用再次处理，匹配的通知和方法按顺序执行；不匹配的方法，则不会执行通知，而是只执行方法本身。**
+
+洋洋洒洒又写了好长篇幅，关于这部分的源码分析另外单独开一篇文章详细介绍吧。
+
+== 参考资料
+
+. https://juejin.im/post/5debc3676fb9a0162f62113f[spring AOP源码深度解析 - 掘金^]
+. https://zhuanlan.zhihu.com/p/35135042[spring AOP 源码解析（一） - 知乎^]
+. https://www.baeldung.com/spring-aop-vs-aspectj[Comparing Spring AOP and AspectJ | Baeldung^] -- 这篇文章非常细致地对比了 Spring AOP 与 AspectJ 的异同。推荐。
+. https://stackoverflow.com/questions/29650355/why-in-spring-aop-the-object-are-wrapped-into-a-jdk-proxy-that-implements-interf[java - Why in Spring AOP the object are wrapped into a JDK proxy that implements interfaces? - Stack Overflow^]
+
+
+
+
+
+
+

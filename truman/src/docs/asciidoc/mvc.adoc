@@ -1,0 +1,11 @@
+[#mvc]
+= Spring MVC
+
+通过 `org.springframework.web.servlet.HttpServletBean.init` 方法开始初始化容器的动作，再进一步委托给 `org.springframework.web.servlet.FrameworkServlet.initServletBean` 方法完成初始化容器。
+
+这个操作和 `org.springframework.web.context.ContextLoaderListener.contextInitialized` 启动 Spring 容器有什么区别？
+
+plantuml::{includedir}/puml/DispatcherServlet.puml[{diagram_attr}]
+
+
+plantuml::{includedir}/puml/DispatchServlet-init-sequence.puml[{diagram_attr}]

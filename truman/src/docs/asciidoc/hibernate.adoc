@@ -1,0 +1,2 @@
+[#hibernate]
+= 整合 Hibernate

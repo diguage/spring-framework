@@ -1,0 +1,67 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **BeanDefinition 继承体系及关键属性**
+
+
+abstract class AttributeAccessorSupport implements AttributeAccessor, Serializable {
+  - attributes: Map<String, Object>
+}
+
+class BeanMetadataAttributeAccessor extends AttributeAccessorSupport implements BeanMetadataElement {
+  - source: Object
+}
+
+interface BeanDefinition extends AttributeAccessor, BeanMetadataElement
+
+abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccessor implements BeanDefinition, Cloneable {
+  - beanClass: Object
+  - abstractFlag: boolean
+  - lazyInit: Boolean
+  - autowireMode: int
+  - dependencyCheck: int
+  - dependsOn: String[]
+  - autowireCandidate: boolean
+  - primary: boolean
+  - qualifiers: Map<String, AutowireCandidateQualifier>
+  - instanceSupplier: Supplier<?>
+  - nonPublicAccessAllowed: boolean
+  - lenientConstructorResolution: boolean
+  - factoryBeanName: String
+  - factoryMethodName: String
+  - constructorArgumentValues: ConstructorArgumentValues
+  - propertyValues: MutablePropertyValues
+  - methodOverrides: MethodOverrides
+  - initMethodName: String
+  - destroyMethodName: String
+  - enforceInitMethod: boolean
+  - enforceDestroyMethod: boolean
+  - synthetic: boolean
+  - role: int
+  - description: String
+  - resource: Resource
+}
+
+class RootBeanDefinition extends AbstractBeanDefinition
+
+interface AnnotatedBeanDefinition extends BeanDefinition
+
+class ChildBeanDefinition extends AbstractBeanDefinition {
+  - parentName: String
+}
+
+class GenericBeanDefinition extends AbstractBeanDefinition {
+  - parentName: String
+}
+
+class ScannedGenericBeanDefinition extends GenericBeanDefinition implements AnnotatedBeanDefinition {
+  - metadata: AnnotationMetadata
+}
+
+class AnnotatedGenericBeanDefinition extends GenericBeanDefinition implements AnnotatedBeanDefinition {
+  - metadata: AnnotationMetadata
+  - factoryMethodMetadata: MethodMetadata
+}
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

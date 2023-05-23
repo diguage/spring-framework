@@ -1,0 +1,59 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **AnnotationAwareAspectJAutoProxyCreator 继承体系及关键方法**
+
+interface BeanPostProcessor {
+  + postProcessBeforeInitialization(Object bean, String beanName): Object
+  + postProcessAfterInitialization(Object bean, String beanName): Object
+}
+
+interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
+  + postProcessBeforeInstantiation(Class<?>, String beanName): Object
+  + postProcessAfterInstantiation(Object bean, String beanName): boolean
+  + postProcessProperties(PropertyValues, Object bean, String beanName): PropertyValues
+  + postProcessPropertyValues(PropertyValues, PropertyDescriptor[], Object bean, String beanName): PropertyValues
+}
+
+interface BeanFactoryAware {
+  + setBeanFactory(BeanFactory): void
+}
+interface BeanClassLoaderAware {
+  + setBeanClassLoader(ClassLoader): void
+}
+
+interface SmartInstantiationAwareBeanPostProcessor extends InstantiationAwareBeanPostProcessor {
+  + predictBeanType(Class<?> beanClass, String beanName): Class<?>
+  + determineCandidateConstructors(Class<?> beanClass, String beanName): Constructor<?>[]
+  + getEarlyBeanReference(Object bean, String beanName): Object
+}
+
+class ProxyConfig {
+  + setProxyTargetClass(boolean): void
+  + isProxyTargetClass(): boolean
+  + setOptimize(boolean): void
+  + isOptimize(): boolean
+  + setOpaque(boolean): void
+  + isOpaque(): boolean
+  + setExposeProxy(boolean): void
+  + isExposeProxy(): boolean
+  + setFrozen(boolean): void
+  + isFrozen(): boolean
+}
+
+class ProxyProcessorSupport extends ProxyConfig implements BeanClassLoaderAware, AopInfrastructureBean
+
+abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware
+
+class BeanNameAutoProxyCreator extends AbstractAutoProxyCreator
+
+abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyCreator
+
+class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProxyCreator
+
+class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorAutoProxyCreator
+
+class DefaultAdvisorAutoProxyCreator extends AbstractAdvisorAutoProxyCreator implements BeanNameAware
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

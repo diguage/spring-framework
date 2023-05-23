@@ -1,0 +1,101 @@
+= 获得通知
+
+在文章 https://www.diguage.com/post/spring-aop-process-overview/[Spring AOP 处理流程概述^] 中，对 Spring AOP 有了一个整体认识。在文章 https://www.diguage.com/post/spring-aop-bootstrap/[Spring AOP 源码分析：入门] 中，对 Spring AOP 的相关入口做了分析。这篇文章就带大家看一看，Spring AOP 是如何获取通知的？
+
+[#example-code]
+== 示例代码
+
+在 https://www.diguage.com/post/how-to-read-spring-sources/#example-code[如何阅读 Spring 源码？: 示例代码^] 中，已经给出了一个完整的 AOP 示例代码。为了节省篇幅，请直接参考那篇文章的示例代码，这里就不在赘述。
+
+== 注册 Advice(通知/增强)
+
+请根据 https://www.diguage.com/post/spring-aop-bootstrap/[Spring AOP 源码分析：入门] 中提到的关键方法入口处，打上断点，开始调试。
+
+首先，需要明确一点的是：对于切面（使用 `@Aspect` 注解标注过的类）在 Spring 容器中，也是被统一f封装为 `BeanDefinition` 实例的，也需要通过一个方式，将其注册到 Spring 容器中。比如，就像 <<example-code>> 那样，通过 `ImportSelector` 方式，使用类名，将其注册到容器中。这样，就可以利用 Spring 容器对 Bean 的 API 来统一处理了。
+
+Advice(通知/增强)几乎是在意想不到的地方完成注册的：在第一次调用 `AbstractAutoProxyCreator#postProcessBeforeInstantiation` 方法时，通过 `AspectJAwareAdvisorAutoProxyCreator#shouldSkip` 方法，完成了切面的注册。下面，我们对这个过程抽丝剥茧，逐步分析。
+
+
+先来看看 `findCandidateAdvisors` 方法：
+
+.`AnnotationAwareAspectJAutoProxyCreator#findCandidateAdvisors`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/aspectj/annotation/AnnotationAwareAspectJAutoProxyCreator.java[tag=findCandidateAdvisors]
+----
+
+=== 查找 XML 配置的 `Advisor`
+
+正如上面注释所示，会先通过 `super.findCandidateAdvisors()` 先获取父类方法加载的切面声明：
+
+.`AbstractAdvisorAutoProxyCreator#findCandidateAdvisors`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/autoproxy/AbstractAdvisorAutoProxyCreator.java[tag=findCandidateAdvisors]
+----
+
+直接看 `advisorRetrievalHelper.findAdvisorBeans()` 方法：
+
+
+.`BeanFactoryAdvisorRetrievalHelper#findAdvisorBeans`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/autoproxy/BeanFactoryAdvisorRetrievalHelper.java[tag=findAdvisorBeans]
+----
+
+这里通过 `BeanFactoryUtils#beanNamesForTypeIncludingAncestors(ListableBeanFactory, Class<?>, boolean, boolean)` 方法来查找 `Advisor`。整个过程，就是针对 `BeanFactory` 递归调用其父 `BeanFactory`，遍历所有的 Bean 名称，查找类型为 `Advisor` 的 Bean 名称，然后调用 `beanFactory.getBean(name, Advisor.class)`，来获得对应的 `Advisor` Bean 并返回。
+
+上面介绍了查找 XML 配置的 `Advisor` 过程。
+
+=== 查找通过注解配置的 `Advisor`
+
+我们回到 `AnnotationAwareAspectJAutoProxyCreator#findCandidateAdvisors` 方法中， `BeanFactoryAspectJAdvisorsBuilder#buildAspectJAdvisors`
+
+.`BeanFactoryAspectJAdvisorsBuilder#buildAspectJAdvisors`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/aspectj/annotation/BeanFactoryAspectJAdvisorsBuilder.java[tag=buildAspectJAdvisors]
+----
+
+这里的逻辑比上面要简单清晰好多：查找出所有的 Bean 名称，然后选出类型标注了 `@Aspect` 注解的 Bean 类型，把 Bean 名称添加到 `BeanFactoryAspectJAdvisorsBuilder#aspectBeanNames` 实例变量中；根据类型信息，使用反射针对符合添加的方法，构建 `Advisor` 对象（实现类为 `InstantiationModelAwarePointcutAdvisorImpl`），然后将其加入到 `BeanFactoryAspectJAdvisorsBuilder#advisorsCache` 变量中。
+
+值得注意的是根据通知的类型，创建不同的 `Advice` 对象，也是在上面的这个过程中，在 `ReflectiveAspectJAdvisorFactory#getAdvice` 方法中完成的。
+
+经过上面的处理，所有对应的 Advice(通知/增强)都会被查找出来。接下来，我们看一看如何针对特定的 Bean 选择出合适的 Advice(通知/增强)的。
+
+这里说“注册”其实意思不太正确。 Advice(通知/增强)没有什么注册一说，它只是被解析后缓存了起来。下次再使用时，就不需要解析了。
+
+== 选取 Advice(通知/增强)
+
+上面解析后的 Advice(通知/增强)都被存放在了 `BeanFactoryAspectJAdvisorsBuilder#Map<String, List<Advisor>> advisorsCache` 变量中。所以，从这里拿到所有通知后再去做筛选。
+
+在 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述] 中已经强调过了，AOP 代理的创建是在执行 `BeanPostProcessor#postProcessAfterInitialization`，也就是 `AnnotationAwareAspectJAutoProxyCreator#postProcessAfterInitialization` 方法中。
+
+在 https://www.diguage.com/post/spring-aop-bootstrap/[Spring AOP 源码分析：入门] 中提到__`getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource)` 获取了所有符合条件的增强信息。__
+
+结合上面两点，找到对应的方法就是 `AbstractAdvisorAutoProxyCreator#getAdvicesAndAdvisorsForBean`。但是，这个方法几乎没啥代码，而是把处理全部委托给了 `AbstractAdvisorAutoProxyCreator#findEligibleAdvisors` 方法来处理。所以，可以直接看这个方法：
+
+.`AbstractAdvisorAutoProxyCreator#findEligibleAdvisors`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/autoproxy/AbstractAdvisorAutoProxyCreator.java[tag=findCandidateAdvisors]
+----
+
+重点在 `findAdvisorsThatCanApply` 方法上，从方法名上来看，这似乎是要查找可用的 Advisor。来看一下具体实现：
+
+.`AopUtils#findAdvisorsThatCanApply`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/support/AopUtils.java[tag=findAdvisorsThatCanApply]
+----
+
+经过多个重载 `canApply` 方法的来回传递，最后由如下方法来进行处理：
+
+.`AopUtils#canApply(Pointcut, Class<?>, boolean)`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/support/AopUtils.java[tag=canApply-Pointcut-Class-boolean]
+----
+
+结果类型和方法的双重筛选后，就可以把符合条件的 Advice(通知/增强)给选择出来了。下一篇文章，来介绍一下如果创建代理类： https://www.diguage.com/post/spring-aop-create-proxy-jdk/[Spring AOP 源码分析：创建代理（一）] 和 https://www.diguage.com/post/spring-aop-create-proxy-cglib/[Spring AOP 源码分析：创建代理（二）]。
+

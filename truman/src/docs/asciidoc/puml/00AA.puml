@@ -1,0 +1,7 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **标题**
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

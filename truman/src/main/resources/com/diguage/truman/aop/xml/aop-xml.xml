@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+	                       https://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/aop
+                           https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+	<aop:aspectj-autoproxy proxy-target-class="true" expose-proxy="true"/>
+
+	<bean id="userDao" class="com.diguage.truman.aop.xml.UserDao"/>
+	<bean id="userService" class="com.diguage.truman.aop.xml.UserService"/>
+
+	<bean id="userAdvice" class="com.diguage.truman.aop.xml.TestAdvice"/>
+
+	<aop:config>
+		<aop:pointcut id="userPointcut" expression="execution(* com.diguage.truman.aop.xml.UserService.test(..))"/>
+
+		<aop:aspect ref="userAdvice">
+			<aop:before method="beforeTest" pointcut-ref="userPointcut"/>
+			<aop:around method="aroundTest" pointcut-ref="userPointcut"/>
+
+			<aop:after method="afterTest" pointcut="execution(* com.diguage.truman.aop.xml.UserService.getById(..))"/>
+		</aop:aspect>
+	</aop:config>
+
+</beans>

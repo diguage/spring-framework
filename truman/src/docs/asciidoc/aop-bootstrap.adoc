@@ -1,0 +1,56 @@
+= 入门
+
+在上一篇文章 https://www.diguage.com/post/spring-aop-process-overview/[Spring AOP 处理流程概述^] 中，对 Spring AOP 有了一个整体认识。这篇文章就带大家做一个细致的源码分析。
+
+== 登堂入室
+
+使用 Spring AOP 也很简单，只需要在配置类上加上 `@EnableAspectJAutoProxy` 注解即可。这个注解处理过程与 https://www.diguage.com/post/spring-extensions-and-mybatis/#mapper-scan[Spring 扩展点实践：整合 MyBATIS^] 中 “`@MapperScan` 处理” 类似，不同的是，Spring AOP 注册了 `AnnotationAwareAspectJAutoProxyCreator`，它是一个 `InstantiationAwareBeanPostProcessor`。具体的类图如下：
+
+plantuml::{includedir}/puml/AnnotationAwareAspectJAutoProxyCreator.puml[{diagram_attr}]
+
+在正式开始源码分析之前，有一点必须强调一下：**Spring AOP 只是借用了 AspectJ 的一些注解和个别关键 API，而整体实现是 Spring 自己完成的，并不是基于 AspectJ 实现的。**这一点跟很多人的认识是不一样的，需要特别指出。
+
+D瓜哥在 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 中指出：创建 AOP 代理对象，有两个时机：
+
+. 调用 `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation` 时，通过调用 `AnnotationAwareAspectJAutoProxyCreator` 对象的 `postProcessBeforeInstantiation` 方法来创建对象；
+. 调用 `BeanPostProcessor#postProcessAfterInitialization` 时，通过调用 `AnnotationAwareAspectJAutoProxyCreator` 对象的 `postProcessAfterInitialization` 方法来创建对象；
+
+下面分别对这两个方法做更详细的介绍。
+
+== `AnnotationAwareAspectJAutoProxyCreator#postProcessBeforeInstantiation`
+
+`AnnotationAwareAspectJAutoProxyCreator` 的 `postProcessBeforeInstantiation` 方法是从 `AbstractAutoProxyCreator` 继承过来的。代码如下：
+
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/autoproxy/AbstractAutoProxyCreator.java[tag=postProcessBeforeInstantiation]
+----
+
+请注意代码中语法高亮的两行代码：
+
+. `getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource)` 获取了所有符合条件的增强信息。
+. `createProxy(beanClass, beanName, specificInterceptors, targetSource)` 创建了代理对象。
+
+== `AnnotationAwareAspectJAutoProxyCreator#postProcessAfterInitialization`
+
+在 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述] 中已经强调过了：绝大部分的 AOP 代理生成都是在 `postProcessAfterInitialization` 方法中完成的。来看一下这个方法：
+
+[{java_src_attr},highlight=7]
+----
+include::{aop_src_dir}/framework/autoproxy/AbstractAutoProxyCreator.java[tag=postProcessAfterInitialization]
+----
+
+`postProcessAfterInitialization` 方法很简单，直接把处理代码委托给了 `wrapIfNecessary(bean, beanName, cacheKey)` 方法来处理。来看一下这个方法：
+
+[{java_src_attr},highlight=32;37-39]
+----
+include::{aop_src_dir}/framework/autoproxy/AbstractAutoProxyCreator.java[tag=wrapIfNecessary]
+----
+
+通过对 `wrapIfNecessary` 分析，我们可以看出，核心处理也就是两个操作：
+
+. `getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource)` 获取了所有符合条件的增强信息。
+. `createProxy(beanClass, beanName, specificInterceptors, targetSource)` 创建了代理对象。
+
+这和 `postProcessBeforeInstantiation` 方法中的处理就一样了。经过千山万水，终于成功在延安胜利会师。下一篇文章 https://www.diguage.com/post/spring-aop-get-advices/[Spring AOP 源码分析：获得通知]，重点介绍一下如何获取通知。
+

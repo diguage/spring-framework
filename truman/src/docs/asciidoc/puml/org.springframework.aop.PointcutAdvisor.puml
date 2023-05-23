@@ -1,0 +1,50 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **PointcutAdvisor 继承体系**
+
+
+interface Advisor {
+	+ EMPTY_ADVICE: Advice
+
+	+ getAdvice(): Advice
+	+isPerInstance(): boolean
+}
+
+interface PointcutAdvisor extends Advisor {
+    + getPointcut(): Pointcut
+}
+
+interface IntroductionInfo {
+	+ getInterfaces(): Class<?>[]
+}
+
+interface IntroductionAdvisor extends Advisor, IntroductionInfo {
+    + getClassFilter(): ClassFilter
+	+ validateInterfaces(): void
+}
+
+interface Ordered {
+	int HIGHEST_PRECEDENCE = Integer.MIN_VALUE;
+	int LOWEST_PRECEDENCE = Integer.MAX_VALUE;
+
+	+ getOrder(): int
+}
+
+class DefaultIntroductionAdvisor implements IntroductionAdvisor, ClassFilter, Ordered
+
+abstract class AbstractPointcutAdvisor implements PointcutAdvisor, Ordered
+
+abstract class AbstractGenericPointcutAdvisor extends AbstractPointcutAdvisor
+
+class RegexpMethodPointcutAdvisor extends AbstractGenericPointcutAdvisor
+
+class NameMatchMethodPointcutAdvisor extends AbstractGenericPointcutAdvisor
+
+class DefaultPointcutAdvisor extends AbstractGenericPointcutAdvisor
+
+class AspectJExpressionPointcutAdvisor extends AbstractGenericPointcutAdvisor
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml
