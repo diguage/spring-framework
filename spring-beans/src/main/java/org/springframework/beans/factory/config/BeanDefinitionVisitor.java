@@ -76,15 +76,22 @@ public class BeanDefinitionVisitor {
 	 * @see #resolveStringValue(String)
 	 */
 	public void visitBeanDefinition(BeanDefinition beanDefinition) {
+		// 处理 ParentName
 		visitParentName(beanDefinition);
+		// 处理 BeanClassName
 		visitBeanClassName(beanDefinition);
+		// 处理 FactoryBeanName
 		visitFactoryBeanName(beanDefinition);
+		// 处理 FactoryMethodName
 		visitFactoryMethodName(beanDefinition);
+		// 处理 Scope
 		visitScope(beanDefinition);
 		if (beanDefinition.hasPropertyValues()) {
+			// 处理 PropertyValues
 			visitPropertyValues(beanDefinition.getPropertyValues());
 		}
 		if (beanDefinition.hasConstructorArgumentValues()) {
+			// 处理 ConstructorArgumentValues
 			ConstructorArgumentValues cas = beanDefinition.getConstructorArgumentValues();
 			visitIndexedArgumentValues(cas.getIndexedArgumentValues());
 			visitGenericArgumentValues(cas.getGenericArgumentValues());

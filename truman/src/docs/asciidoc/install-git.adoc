@@ -1,0 +1,60 @@
+[#install-git]
+= 安装 Git
+
+由于 Spring 的源代码是使用 Git 来做版本管理的，而且是托管在 https://github.com/[Github^] 上。所以，需要先安装相应的版本管理工具 Git。本节D瓜哥就来介绍一下 Git 的安装。
+
+[#install-git-on-mac]
+== 在 Mac OSX 上安装 Git
+
+在 Mac OSX 系统上安装 Git 非常简单。只需一条命令即可：
+
+[source,bash,{source_attr}]
+----
+brew insatll git
+----
+
+NOTE: 没有使用过 Homebrew，请参考 https://brew.sh/index_zh-cn.html[Homebrew — OS X 不可或缺的套件管理器^]。
+
+[#install-git-on-win]
+== 在 Windows 上安装 Git
+
+在 Windows 上安装 Git，也比较简单了，直接去 https://gitforwindows.org/[Git for Windows^] 下载最新版，然后下一步下一步就OK了。
+
+NOTE: 由于国内的特殊网络状况，有可能下载可能会很慢甚至失败。实在不行，请“科学上网”。
+
+[#install-git-on-linux]
+== 在 Ubuntu 上安装 Git
+
+在 Ubuntu 上安装 Git，相对来说，稍微麻烦一点点，需要多执行几个命令。命令如下：
+
+[source,bash,{source_attr}]
+----
+sudo apt-add-repository ppa:git-core/ppa # <1>
+sudo apt-get update                      # <2>
+sudo apt-get install git                 # <3>
+----
+<1> 这是添加 Git 的软件源；
+<2> 更新软件源，这样可以应用上第一步安装的软件源，并且可以安装到最新版；
+<3> 安装 Git。
+
+[NOTE]
+====
+如果在执行第一步时，提示找不到命令时，请执行 `sudo apt-get install -y python-software-properties`。
+
+`add-apt-repository` 命令可以向本地软件源中添加PPA软件库提供的软件地址，然后就可以使用 `apt-get` 更新安装、更新软件。而 `add-apt-repository` 是由 `python-software-properties` 这个工具包提供的。所以要先安装 `python-software-properties` 就能使用 `add-apt-repository`。
+====
+
+[#config-git]
+== 配置 Git
+
+经过上一节的内容后，Git 已经安装好了。但是，在使用之前，需要做一些简单的配置。Mac OSX、Ubuntu 上直接打开终端，在 Windows 上打开刚刚安装的 *Git Bash*，然后执行如下命令：
+
+[source,bash,{source_attr}]
+----
+git config --global user.name <Your Name>    # <1>
+git config --global user.email <Your Email>  # <2>
+----
+<1> 配置用户名；
+<2> 配置电子邮箱。
+
+然后，就可以正常使用了。由于 Git 不是本书的重点。这里就不做过多介绍了。等后续用到再视情况来介绍。

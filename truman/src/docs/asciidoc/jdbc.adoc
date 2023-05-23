@@ -1,0 +1,41 @@
+[#jdbc]
+= JdbcTemplate
+
+`SQLExceptionTranslator` 是一个接口，如果你需要在 `SQLException` 和 `org.springframework.dao.DataAccessException` 之间作转换，那么必须实现该接口。
+
+转换器类的实现可以采用一般通用的做法(比如使用 JDBC 的 SQLState code)，如果为了使转换更准确，也可以进行定制（比如使用 Oracle 的 error code）。
+
+`SQLErrorCodeSQLExceptionTranslator` 是 `SQLExceptionTranslator` 的默认实现。该实现使用指定数据库厂商的 error code，比采用 SQLState 更精确。转换过程基于一个 JavaBean （ 类 型 为 SQLErrorCodes ） 中 的 error code 。
+
+这 个 JavaBean 由 `SQLErrorCodesFactory` 工厂类创建，其中的内容来自于 *`sql-error-codes.xml`* 配置文 件 。
+
+该文件中的数据库厂商代码基于 Database MetaData 信息中的 DatabaseProductName，从而配合当前数据库的使用。
+
+`SQLErrorCodeSQLExceptionTranslator` 使用以下的匹配规则：首先检查是否存在完成定制转换的子类实现 。通常 `SQLErrorCodeSQLExceptionTranslator` 这个类可以作为一个具体类使用，不需要进行定制，那么这个规则将不适用。
+接着将 `SQLException` 的 error code 与错误代码集中的 error code 进行匹配。默认情况下错误代码集将从 `SQLErrorCodesFactory` 取得。错误代码集来自 classpath 下的 `sql-error-codes.xml` 文件，它们将与数据库 metadata 信息中的 database name 进行映射。
+
+== 基于 `AbstractRoutingDataSource` 的主从切换
+
+可以考虑使用 `AbstractRoutingDataSource` 做一个透明主从切换代理：
+
+[{java_src_attr}]
+----
+include::{truman_src_dir}/jdbc/RoutingDataSourceTest.java[]
+----
+
+WARNING: 这还是一个半成品！如果用于生成，还需要打磨，比如简化配置和侵入、接入配置中心等。
+
+== 异常体系
+
+Spring 会根据错误码和 SQL 状态码将 `SQLExeption` 转换为对应的 Spring DAO 异常 。 在 `org.springframework.jdbc.support` 包中定义了 `SQLExceptionTranslator` 接口，该接口的两个实现类 `SQLErrorCodeSQLExceptionTranslator` 和  `SQLStateSQLExceptionTranslator` 分别负责处理 `SQLException` 中错误代码和 SQL 状态码的转换工作 。
+
+
+`SQLErrorCodeSQLExceptionTranslator.doTranslate` 是真正实现从错误码到异常的转换工作。在 `sql-error-codes.xml` 文件中定义异常类型，实现可扩展性。
+
+在两个地方完成异常转换工作：
+
+. 在执行 SQL 时报错，这个时候就要进行回滚。所以，在回滚时，执行异常转换。
++
+TODO dgg 如果"关闭事务"（事务是否可以关闭？）或只读事务时，有事务吗？会执行回滚吗？
++
+. 在提交时报错，进行异常转换。

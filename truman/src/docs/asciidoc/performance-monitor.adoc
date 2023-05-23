@@ -1,0 +1,52 @@
+[#performance-monitor]
+= 性能监视器
+
+[source,xml,{source_attr}]
+.引入依赖
+----
+<dependency>
+    <groupId>com.jamonapi</groupId>
+    <artifactId>jamon</artifactId>
+    <version>2.81</version>
+</dependency>
+----
+
+[source,xml,{source_attr}]
+.增加 Spring 配置
+----
+<bean id="jamonPerformAdvice" class="org.springframework.aop.interceptor.JamonPerformanceMonitorInterceptor"/>
+
+<aop:config>
+    <aop:pointcut id="allServiceMethods" expression="execution(* com.diguage.durian.impl..*(..))"/>
+    <aop:pointcut id="allDaoMethods" expression="execution(* com.diguage.durian.dao..*(..))"/>
+    <aop:advisor advice-ref="jamonPerformAdvice" pointcut-ref="allServiceMethods"/>
+    <aop:advisor advice-ref="jamonPerformAdvice" pointcut-ref="allDaoMethods"/>
+</aop:config>
+----
+
+[source,xml,{source_attr}]
+.增加日志配置
+----
+<appender name="performanceLogs" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>/tmp/durian_performance.log</file>
+    <!-- 根据文件大小保存日志文件 -->
+    <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+        <fileNamePattern>/tmp/durian_performance.%i.log.zip</fileNamePattern>
+        <minIndex>1</minIndex>
+        <maxIndex>2</maxIndex>
+    </rollingPolicy>
+    <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+        <maxFileSize>100MB</maxFileSize>
+    </triggeringPolicy>
+
+    <encoder>
+        <pattern>%date [%thread] %-5level %logger{72} - %msg%n</pattern>
+    </encoder>
+</appender>
+
+<logger name="org.springframework.aop.interceptor.JamonPerformanceMonitorInterceptor" level="TRACE" additivity="false">
+    <appender-ref ref="performanceLogs"/>
+</logger>
+----
+
+TIP: 注意 `JamonPerformanceMonitorInterceptor` 的日志级别。线上环境的输入级别一般是 `INFO` ，如果不配置，则这里的日志直接被过滤掉了。
