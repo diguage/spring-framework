@@ -1,0 +1,141 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **DataAccessException 继承体系**
+
+
+abstract class NestedRuntimeException extends RuntimeException {
+  + NestedRuntimeException(String msg)
+  + NestedRuntimeException(String msg, Throwable cause)
+  ..
+  + Throwable getRootCause()
+  + Throwable getMostSpecificCause()
+  + boolean contains(Class<?> exType)
+}
+
+abstract class DataAccessException extends NestedRuntimeException {
+  + DataAccessException(String msg)
+  + DataAccessException(String msg, Throwable cause)
+}
+
+abstract class NonTransientDataAccessException extends DataAccessException
+
+abstract class TransientDataAccessException extends DataAccessException
+
+class RecoverableDataAccessException extends DataAccessException
+
+abstract class r2dbc.ScriptException extends DataAccessException
+
+abstract class ScriptException extends DataAccessException
+
+class ConnectionFactoryLookupFailureException extends NonTransientDataAccessException
+
+class CleanupFailureDataAccessException extends NonTransientDataAccessException
+
+class DataIntegrityViolationException extends NonTransientDataAccessException
+
+class DataSourceLookupFailureException extends NonTransientDataAccessException
+
+class InvalidDataAccessResourceUsageException extends NonTransientDataAccessException
+
+class NonTransientDataAccessResourceException extends NonTransientDataAccessException
+
+abstract class UncategorizedDataAccessException extends NonTransientDataAccessException
+
+class InvalidDataAccessApiUsageException extends NonTransientDataAccessException
+
+class PermissionDeniedDataAccessException extends NonTransientDataAccessException
+
+class DataRetrievalFailureException extends NonTransientDataAccessException
+
+class TransientDataAccessResourceException extends TransientDataAccessException
+
+class ConcurrencyFailureException extends TransientDataAccessException
+
+class QueryTimeoutException extends TransientDataAccessException
+
+class r2dbc.ScriptParseException extends r2dbc.ScriptException
+
+class r2dbc.UncategorizedScriptException extends r2dbc.ScriptException
+
+class r2dbc.CannotReadScriptException extends r2dbc.ScriptException
+
+class r2dbc.ScriptStatementFailedException extends r2dbc.ScriptException
+
+class CannotReadScriptException extends ScriptException
+
+class ScriptParseException extends ScriptException
+
+class ScriptStatementFailedException extends ScriptException
+
+class UncategorizedScriptException extends ScriptException
+
+class DuplicateKeyException extends DataIntegrityViolationException
+
+class HibernateQueryException extends InvalidDataAccessResourceUsageException
+
+class TypeMismatchDataAccessException extends InvalidDataAccessResourceUsageException
+
+class r2dbc.BadSqlGrammarException extends InvalidDataAccessResourceUsageException
+
+class InvalidResultSetAccessException extends InvalidDataAccessResourceUsageException
+
+class BadSqlGrammarException extends InvalidDataAccessResourceUsageException
+
+class IncorrectUpdateSemanticsDataAccessException extends InvalidDataAccessResourceUsageException
+
+class JdbcUpdateAffectedIncorrectNumberOfRowsException extends IncorrectUpdateSemanticsDataAccessException
+
+
+class DataAccessResourceFailureException extends NonTransientDataAccessResourceException
+
+class CannotGetJdbcConnectionException extends DataAccessResourceFailureException
+
+class UncategorizedR2dbcException extends UncategorizedDataAccessException
+
+class JpaSystemException extends UncategorizedDataAccessException
+
+class SQLWarningException extends UncategorizedDataAccessException
+
+class UncategorizedSQLException extends UncategorizedDataAccessException
+
+class HibernateJdbcException extends UncategorizedDataAccessException
+
+class HibernateSystemException extends UncategorizedDataAccessException
+
+class SqlXmlFeatureNotImplementedException extends InvalidDataAccessApiUsageException
+
+class IncorrectResultSizeDataAccessException extends DataRetrievalFailureException
+
+class EmptyResultDataAccessException extends IncorrectResultSizeDataAccessException
+
+class IncorrectResultSetColumnCountException extends DataRetrievalFailureException
+
+class ObjectRetrievalFailureException extends DataRetrievalFailureException
+
+class JpaObjectRetrievalFailureException extends ObjectRetrievalFailureException
+
+class HibernateObjectRetrievalFailureException extends ObjectRetrievalFailureException
+
+class LobRetrievalFailureException extends DataRetrievalFailureException
+
+class PessimisticLockingFailureException extends ConcurrencyFailureException
+
+class DeadlockLoserDataAccessException extends PessimisticLockingFailureException
+
+class CannotSerializeTransactionException extends PessimisticLockingFailureException
+
+class CannotAcquireLockException extends PessimisticLockingFailureException
+
+class OptimisticLockingFailureException extends ConcurrencyFailureException
+
+class ObjectOptimisticLockingFailureException extends OptimisticLockingFailureException
+
+class HibernateOptimisticLockingFailureException extends ObjectOptimisticLockingFailureException
+
+class JpaOptimisticLockingFailureException extends ObjectOptimisticLockingFailureException
+
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

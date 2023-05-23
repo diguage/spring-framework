@@ -1,0 +1,44 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **BeanFactory 继承体系**
+
+
+interface BeanFactory
+interface HierarchicalBeanFactory
+interface ListableBeanFactory
+interface ConfigurableBeanFactory
+interface AutowireCapableBeanFactory
+abstract class AbstractBeanFactory
+class StaticListableBeanFactory
+interface ApplicationContext
+interface ConfigurableListableBeanFactory
+abstract class AbstractAutowireCapableBeanFactory
+class DefaultListableBeanFactory
+class XmlBeanFactory
+
+
+BeanFactory <|-- HierarchicalBeanFactory
+BeanFactory <|-- ListableBeanFactory
+HierarchicalBeanFactory <|-- ConfigurableBeanFactory
+BeanFactory <|-- AutowireCapableBeanFactory
+
+ConfigurableBeanFactory <|.. AbstractBeanFactory
+
+ListableBeanFactory <|.. StaticListableBeanFactory
+
+ListableBeanFactory <|-- ApplicationContext
+HierarchicalBeanFactory <|-- ApplicationContext
+
+ListableBeanFactory <|-- ConfigurableListableBeanFactory
+AutowireCapableBeanFactory <|-- ConfigurableListableBeanFactory
+ConfigurableBeanFactory <|-- ConfigurableListableBeanFactory
+
+AutowireCapableBeanFactory <|.. AbstractAutowireCapableBeanFactory
+AbstractBeanFactory <|-- AbstractAutowireCapableBeanFactory
+
+AbstractAutowireCapableBeanFactory <|-- DefaultListableBeanFactory
+ConfigurableListableBeanFactory <|.. DefaultListableBeanFactory
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

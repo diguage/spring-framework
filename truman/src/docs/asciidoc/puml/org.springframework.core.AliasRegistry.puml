@@ -1,0 +1,23 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **AliasRegistry 继承体系**
+' 删除去不必要的某些类
+
+class SimpleAliasRegistry implements AliasRegistry
+
+interface BeanDefinitionRegistry extends AliasRegistry
+
+class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry
+
+class SimpleBeanDefinitionRegistry extends SimpleAliasRegistry implements BeanDefinitionRegistry
+
+class FactoryBeanRegistrySupport extends DefaultSingletonBeanRegistry
+
+class DefaultListableBeanFactory implements  BeanDefinitionRegistry
+
+class GenericApplicationContext extends AbstractApplicationContext implements BeanDefinitionRegistry
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

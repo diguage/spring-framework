@@ -1,0 +1,23 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **BeanFactory.getBean Bean 创建**
+
+actor Actor
+participant BeanFactory << (C,#ADD1B2) >>
+participant BeanPostProcessor << (I,#AB9DE1) >>
+
+Actor -> BeanFactory: getBean
+activate BeanFactory
+
+  BeanFactory -> BeanPostProcessor
+  activate BeanPostProcessor
+
+  BeanFactory <- BeanPostProcessor
+  deactivate BeanPostProcessor
+
+Actor -> BeanFactory
+deactivate BeanFactory
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

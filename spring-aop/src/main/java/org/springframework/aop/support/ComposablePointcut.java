@@ -25,6 +25,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
+ * Spring AOP 提供可以进行 `Pointcut` 逻辑运算的 `Pointcut` 实现。<p>
+ *
  * Convenient class for building up pointcuts.
  *
  * <p>All methods return {@code ComposablePointcut}, so we can use concise idioms

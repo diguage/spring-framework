@@ -1,0 +1,46 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **Pointcut 继承体系**
+
+
+interface Pointcut {
+    + TRUE: Pointcut
+    + getClassFilter(): ClassFilter
+    + getMethodMatcher(): MethodMatcher
+}
+
+Pointcut *-up- MethodMatcher
+Pointcut *-up- ClassFilter
+
+abstract class DynamicMethodMatcherPointcut
+DynamicMethodMatcherPointcut .right.|> Pointcut
+
+class AnnotationMatchingPointcut
+AnnotationMatchingPointcut .left.|> Pointcut
+
+interface ExpressionPointcut extends Pointcut
+
+class ControlFlowPointcut implements Pointcut
+
+class ComposablePointcut implements Pointcut
+
+abstract class StaticMethodMatcherPointcut implements Pointcut
+
+class TruePointcut implements Pointcut
+
+abstract class AbstractExpressionPointcut implements ExpressionPointcut
+
+class AspectJExpressionPointcut extends AbstractExpressionPointcut
+
+abstract class StaticMethodMatcherPointcutAdvisor extends StaticMethodMatcherPointcut
+
+abstract class AbstractRegexpMethodPointcut extends StaticMethodMatcherPointcut
+
+class JdkRegexpMethodPointcut extends AbstractRegexpMethodPointcut
+
+class NameMatchMethodPointcut extends StaticMethodMatcherPointcut
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

@@ -1,0 +1,96 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **BeanFactory 继承体系及关键属性**
+
+interface BeanDefinitionRegistry extends AliasRegistry
+
+class SimpleAliasRegistry implements AliasRegistry {
+	- aliasMap: Map<String, String>
+}
+
+class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
+  - singletonObjects: Map<String, Object>
+  - singletonFactories: Map<String, ObjectFactory<?>>
+  - earlySingletonObjects: Map<String, Object>
+  - registeredSingletons: Set<String>
+  - singletonsCurrentlyInCreation: Set<String>
+  - inCreationCheckExclusions: Set<String>
+  - suppressedExceptions: Set<Exception>
+  - singletonsCurrentlyInDestruction: boolean
+  - disposableBeans: Map<String, Object>
+  - containedBeanMap: Map<String, Set<String>>
+  - dependentBeanMap: Map<String, Set<String>>
+  - dependenciesForBeanMap: Map<String, Set<String>>
+}
+
+abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanRegistry {
+  - factoryBeanObjectCache: Map<String, Object>
+}
+
+interface ListableBeanFactory extends BeanFactory
+
+'StaticListableBeanFactory 不常用，不予展示
+'class StaticListableBeanFactory implements ListableBeanFactory
+
+interface HierarchicalBeanFactory extends BeanFactory
+
+interface ApplicationContext extends ListableBeanFactory, HierarchicalBeanFactory
+
+interface ConfigurableBeanFactory extends HierarchicalBeanFactory, SingletonBeanRegistry
+
+interface AutowireCapableBeanFactory extends BeanFactory
+
+interface ConfigurableListableBeanFactory extends ListableBeanFactory, AutowireCapableBeanFactory, ConfigurableBeanFactory
+
+abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport implements ConfigurableBeanFactory {
+  - parentBeanFactory: BeanFactory
+  - beanClassLoader: ClassLoader
+  - tempClassLoader: ClassLoader
+  - beanExpressionResolver: BeanExpressionResolver
+  - conversionService: ConversionService
+  - propertyEditorRegistrars: Set<PropertyEditorRegistrar>
+  - customEditors: Map<Class<?>, Class<? extends PropertyEditor>>
+  - typeConverter: TypeConverter
+  - embeddedValueResolvers: List<StringValueResolver>
+  - beanPostProcessors: List<BeanPostProcessor>
+  - beanPostProcessorCache: BeanPostProcessorCache
+  - scopes: Map<String, Scope>
+  - mergedBeanDefinitions: Map<String, RootBeanDefinition>
+  - alreadyCreated: Set<String>
+  - prototypesCurrentlyInCreation: ThreadLocal<Object>
+}
+
+abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFactory implements AutowireCapableBeanFactory {
+  - instantiationStrategy: InstantiationStrategy
+  - parameterNameDiscoverer: ParameterNameDiscoverer
+  - allowCircularReferences: boolean
+  - allowRawInjectionDespiteWrapping: boolean
+  - ignoredDependencyTypes: Set<Class<?>>
+  - ignoredDependencyInterfaces: Set<Class<?>>
+  - currentlyCreatedBean: NamedThreadLocal<String>
+  - factoryBeanInstanceCache: ConcurrentMap<String, BeanWrapper>
+  - factoryMethodCandidateCache: ConcurrentMap<Class<?>, Method[]>
+  - filteredPropertyDescriptorsCache: ConcurrentMap<Class<?>, PropertyDescriptor[]>
+}
+
+class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFactory implements ConfigurableListableBeanFactory, BeanDefinitionRegistry {
+  - {static} serializableFactories: Map<String, Reference<DefaultListableBeanFactory>>
+  - allowBeanDefinitionOverriding: boolean
+  - allowEagerClassLoading: boolean
+  - dependencyComparator: Comparator<Object>
+  - autowireCandidateResolver: AutowireCandidateResolver
+  - resolvableDependencies: Map<Class<?>, Object>
+  - beanDefinitionMap: Map<String, BeanDefinition>
+  - mergedBeanDefinitionHolders: Map<String, BeanDefinitionHolder>
+  - allBeanNamesByType: Map<Class<?>, String[]>
+  - singletonBeanNamesByType: Map<Class<?>, String[]>
+  - beanDefinitionNames: List<String>
+  - manualSingletonNames: Set<String>
+  - frozenBeanDefinitionNames: String[]
+  - configurationFrozen: boolean
+}
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

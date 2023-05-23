@@ -1,0 +1,174 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **AbstractApplicationContext.obtainFreshBeanFactory -- XML 配置文件解析**
+
+
+actor Actor
+participant AbstractApplicationContext << (C,#ADD1B2) >>
+participant AbstractRefreshableApplicationContext << (C,#ADD1B2) >>
+participant AbstractXmlApplicationContext << (C,#ADD1B2) >>
+participant XmlBeanDefinitionReader << (C,#ADD1B2) >>
+participant ResourceLoader << (I,#AB9DE1) >>
+participant BeanDefinitionDocumentReader << (C,#ADD1B2) >>
+participant BeanDefinitionParserDelegate << (C,#ADD1B2) >>
+participant DefaultListableBeanFactory << (C,#ADD1B2) >>
+participant NamespaceHandler << (I,#AB9DE1) >>
+
+Actor -> AbstractApplicationContext: ""refresh""\n重塑容器
+activate AbstractApplicationContext
+
+    AbstractApplicationContext -> AbstractApplicationContext: ""obtainFreshBeanFactory""\n获取BeanFactory
+    activate AbstractApplicationContext
+
+        AbstractApplicationContext -> AbstractRefreshableApplicationContext: ""refreshBeanFactory""\n刷新BeanFactory
+        activate AbstractRefreshableApplicationContext
+
+            AbstractRefreshableApplicationContext -> AbstractXmlApplicationContext: ""loadBeanDefinitions""\n加载 ""BeanDefinition""
+            activate AbstractXmlApplicationContext
+
+            AbstractXmlApplicationContext -> AbstractXmlApplicationContext: ""loadBeanDefinitions""\n加载 ""BeanDefinition""
+            activate AbstractXmlApplicationContext
+
+                AbstractXmlApplicationContext -> XmlBeanDefinitionReader: ""loadBeanDefinitions""\n加载 ""BeanDefinition""
+                activate XmlBeanDefinitionReader
+                note right #FFAAAA: ""loadBeanDefinitions"" 方法被重\n载了多次，在这里也被调用了多次。
+
+                    XmlBeanDefinitionReader -> ResourceLoader: ""getResources""\n加载 ""Resource""
+                    activate ResourceLoader
+                    note over XmlBeanDefinitionReader,ResourceLoader: 将配置路径转化成 ""Resource"" 对象。\n<color red>注：这里的路径也支持占位符替换。可以从环境变量中取值。</color>
+                    XmlBeanDefinitionReader <- ResourceLoader
+                    deactivate ResourceLoader
+
+                    |||
+
+                    XmlBeanDefinitionReader -> XmlBeanDefinitionReader: ""doLoadBeanDefinitions""\n加载 ""BeanDefinition""
+                    activate XmlBeanDefinitionReader
+                        XmlBeanDefinitionReader -> BeanDefinitionDocumentReader: ""registerBeanDefinitions""\n注册 ""BeanDefinition""
+                        activate BeanDefinitionDocumentReader
+                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader: ""doRegisterBeanDefinitions""\n注册 ""BeanDefinition""
+                            activate BeanDefinitionDocumentReader
+                                BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader: ""parseBeanDefinitions""\n处理 ""BeanDefinition"" 定义
+                                activate BeanDefinitionDocumentReader
+                                note right #FFAAAA: 对于 XML 的解析都在次方法中！
+                                    alt #LightGreen **默认命名空间（即 ""beans""）**
+                                        |||
+                                        group#yellow ""<import>""
+                                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader: ""importBeanDefinitionResource""\n处理 ""<import>"" 标签
+                                            activate BeanDefinitionDocumentReader
+                                            note right #FFAAAA: 该方法时序图做了极大简化处理。\n不过，大致流程是这样的。
+                                                BeanDefinitionDocumentReader -> ResourceLoader: ""getResources""\n加载 ""Resource""
+                                                activate ResourceLoader
+                                                note over BeanDefinitionDocumentReader,ResourceLoader: 将配置路径转化成 ""Resource"" 对象。\n<color red>注：这里的路径也支持占位符替换。可以从环境变量中取值。</color>
+                                                BeanDefinitionDocumentReader <- ResourceLoader
+                                                deactivate ResourceLoader
+                                                |||
+                                                BeanDefinitionDocumentReader -> XmlBeanDefinitionReader: ""loadBeanDefinitions""\n加载 ""BeanDefinition""
+                                                activate XmlBeanDefinitionReader
+                                                note over BeanDefinitionDocumentReader,XmlBeanDefinitionReader: “递归”调用 ""loadBeanDefinitions"" 方法，解析配置文件并加载 Bean。
+                                                BeanDefinitionDocumentReader <- XmlBeanDefinitionReader
+                                                deactivate XmlBeanDefinitionReader
+                                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader
+                                            deactivate BeanDefinitionDocumentReader
+                                            |||
+                                        end
+
+                                        |||
+
+                                        group#yellow ""<alias>""
+                                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader: ""processAliasRegistration""\n处理 ""<alias>"" 标签
+                                            activate BeanDefinitionDocumentReader
+                                                BeanDefinitionDocumentReader -> DefaultListableBeanFactory: ""registerAlias""\n注册别名
+                                                activate DefaultListableBeanFactory
+                                                  note over BeanDefinitionDocumentReader,DefaultListableBeanFactory: 其实，这里调用的是 ""AliasRegistry"" 的 ""registerAlias"" 方法。\n 但， ""DefaultListableBeanFactory"" 是 ""AliasRegistry"" 的一个实现类。
+                                                BeanDefinitionDocumentReader -> DefaultListableBeanFactory
+                                                deactivate DefaultListableBeanFactory
+                                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader
+                                            deactivate BeanDefinitionDocumentReader
+                                            |||
+                                        end
+
+                                        |||
+
+                                        group#yellow ""<bean>""
+                                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader: ""processBeanDefinition""\n处理 ""<bean>"" 标签
+                                            activate BeanDefinitionDocumentReader
+                                                BeanDefinitionDocumentReader -> BeanDefinitionParserDelegate: ""parseBeanDefinitionElement""\n处理 ""<bean>"" 标签元素
+                                                activate BeanDefinitionParserDelegate
+                                                  note over BeanDefinitionDocumentReader,BeanDefinitionParserDelegate: 这里也一并处理 ""<bean>"" 标签的子标签，比如 ""<property>"" 等标签。\n还会设置一些默认值，比如 ""lazy-init"" 等
+                                                BeanDefinitionDocumentReader -> BeanDefinitionParserDelegate
+                                                deactivate BeanDefinitionParserDelegate
+
+                                                |||
+
+                                                BeanDefinitionDocumentReader -> DefaultListableBeanFactory: ""registerBeanDefinition""\n注册 ""BeanDefinition""
+                                                activate DefaultListableBeanFactory
+                                                  note over BeanDefinitionDocumentReader,DefaultListableBeanFactory: 其实，这里调用的是 ""BeanDefinitionRegistry"" 的 ""registerBeanDefinition"" 方法。\n 但， ""DefaultListableBeanFactory"" 是 ""BeanDefinitionRegistry"" 的一个实现类。
+                                                BeanDefinitionDocumentReader -> DefaultListableBeanFactory
+                                                deactivate DefaultListableBeanFactory
+
+                                                |||
+                                                loop 上述 ""BeanDefinition"" 对象中包含的所有别名
+                                                    BeanDefinitionDocumentReader -> DefaultListableBeanFactory: ""registerAlias""\n注册别名
+                                                    activate DefaultListableBeanFactory
+                                                      note over BeanDefinitionDocumentReader,DefaultListableBeanFactory : 其实，这里调用的是 ""AliasRegistry"" 的方法。\n但， ""DefaultListableBeanFactory"" 是 ""AliasRegistry"" 的一个实现类。
+                                                    BeanDefinitionDocumentReader -> DefaultListableBeanFactory
+                                                    deactivate DefaultListableBeanFactory
+                                                end
+                                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader
+                                            deactivate BeanDefinitionDocumentReader
+                                            |||
+                                        end
+
+                                        |||
+
+                                        group#yellow ""<beans>""
+                                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader: ""doRegisterBeanDefinitions""\n处理 ""<beans>"" 标签
+                                            activate BeanDefinitionDocumentReader
+                                                note over BeanDefinitionDocumentReader,BeanDefinitionDocumentReader:递归调用，处理 ""<beans>"" 标签。
+                                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader
+                                            deactivate BeanDefinitionDocumentReader
+                                            |||
+                                        end
+                                        |||
+                                    else #FFF0C5 **除 ""beans"" 外的其他命名空间**
+                                        BeanDefinitionDocumentReader -> BeanDefinitionParserDelegate: ""parseCustomElement""\n处理自定义标签元素
+                                        activate BeanDefinitionParserDelegate
+                                            BeanDefinitionParserDelegate -> NamespaceHandler: ""parse""\n处理自定义标签元素
+                                            activate NamespaceHandler
+                                              note over BeanDefinitionParserDelegate,NamespaceHandler: 除 ""beans"" 命名空间外，其他所有标签都是通过该机制来扩展 Spring 的能力的。\n只需将 Spring 其他命名空间的或自定义命名空间的标签处理成 ""BeanDefinition"" 对象即可，\n后续，Spring 会调用 ""BeanDefinitionRegistry"" 的 ""registerBeanDefinition"" 方法注册该对象。
+                                            BeanDefinitionParserDelegate <- NamespaceHandler
+                                            deactivate NamespaceHandler
+                                        BeanDefinitionDocumentReader -> BeanDefinitionParserDelegate
+                                        deactivate BeanDefinitionParserDelegate
+                                        |||
+                                    end
+                                BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader
+                                deactivate BeanDefinitionDocumentReader
+                            BeanDefinitionDocumentReader -> BeanDefinitionDocumentReader
+                            deactivate BeanDefinitionDocumentReader
+                        XmlBeanDefinitionReader <- BeanDefinitionDocumentReader
+                        deactivate BeanDefinitionDocumentReader
+                    XmlBeanDefinitionReader -> XmlBeanDefinitionReader
+                    deactivate XmlBeanDefinitionReader
+
+                AbstractXmlApplicationContext <- XmlBeanDefinitionReader
+                deactivate XmlBeanDefinitionReader
+
+            AbstractXmlApplicationContext -> AbstractXmlApplicationContext
+            deactivate AbstractXmlApplicationContext
+
+            AbstractRefreshableApplicationContext <- AbstractXmlApplicationContext
+            deactivate AbstractXmlApplicationContext
+
+        AbstractApplicationContext <- AbstractRefreshableApplicationContext
+        deactivate AbstractRefreshableApplicationContext
+
+    AbstractApplicationContext -> AbstractApplicationContext
+    deactivate AbstractApplicationContext
+
+Actor <- AbstractApplicationContext: 完成容器初始化
+deactivate AbstractApplicationContext
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

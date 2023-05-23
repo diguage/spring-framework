@@ -1,0 +1,31 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **ResourceLoader 与 ApplicationContext**
+
+
+interface ResourceLoader
+
+note right of ResourceLoader : 加载单个 Resource
+
+class DefaultResourceLoader implements ResourceLoader
+
+interface ResourcePatternResolver extends ResourceLoader
+
+class PathMatchingResourcePatternResolver implements ResourcePatternResolver
+
+note right of ResourcePatternResolver : 可以批量加载\nResource
+
+interface ApplicationContext extends ResourcePatternResolver
+interface ConfigurableApplicationContext extends ApplicationContext
+abstract class AbstractApplicationContext implements ConfigurableApplicationContext
+
+abstract class AbstractApplicationContext extends DefaultResourceLoader {
+    - resourcePatternResolver:ResourcePatternResolver
+}
+
+AbstractApplicationContext o-- PathMatchingResourcePatternResolver : has a >
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

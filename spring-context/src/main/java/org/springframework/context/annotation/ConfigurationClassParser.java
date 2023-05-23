@@ -276,6 +276,7 @@ class ConfigurationClassParser {
 		this.configurationClasses.put(configClass, configClass);
 	}
 
+	// tag::doProcessConfigurationClass[]
 	/**
 	 * Apply processing and build a complete {@link ConfigurationClass} by reading the
 	 * annotations, members and methods from the source class. This method can be called
@@ -294,6 +295,7 @@ class ConfigurationClassParser {
 			processMemberClasses(configClass, sourceClass, filter);
 		}
 
+		// 处理 @PropertySource 注解
 		// Process any @PropertySource annotations
 		for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), org.springframework.context.annotation.PropertySource.class,
@@ -307,6 +309,7 @@ class ConfigurationClassParser {
 			}
 		}
 
+		// 处理 @ComponentScan 注解
 		// Search for locally declared @ComponentScan annotations first.
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScan.class, ComponentScans.class,
@@ -342,9 +345,11 @@ class ConfigurationClassParser {
 			}
 		}
 
+		// 处理 @Import 注解
 		// Process any @Import annotations
 		processImports(configClass, sourceClass, getImports(sourceClass), filter, true);
 
+		// 处理 @ImportResource 注解
 		// Process any @ImportResource annotations
 		AnnotationAttributes importResource =
 				AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);
@@ -357,6 +362,7 @@ class ConfigurationClassParser {
 			}
 		}
 
+		// 处理 @Bean 注解的方法
 		// Process individual @Bean methods
 		Set<MethodMetadata> beanMethods = retrieveBeanMethodMetadata(sourceClass);
 		for (MethodMetadata methodMetadata : beanMethods) {
@@ -382,6 +388,7 @@ class ConfigurationClassParser {
 		// No superclass -> processing is complete
 		return null;
 	}
+	// end::doProcessConfigurationClass[]
 
 	/**
 	 * Register member (nested) classes that happen to be configuration classes themselves.
@@ -514,6 +521,8 @@ class ConfigurationClassParser {
 		}
 	}
 
+
+	// tag::getImports[]
 	/**
 	 * Returns {@code @Import} classes, considering all meta-annotations.
 	 */
@@ -522,7 +531,9 @@ class ConfigurationClassParser {
 		collectImports(sourceClass, imports, new HashSet<>());
 		return imports;
 	}
+	// end::getImports[]
 
+	// tag::collectImports[]
 	/**
 	 * Recursively collect all declared {@code @Import} values. Unlike most
 	 * meta-annotations it is valid to have several {@code @Import}s declared with
@@ -549,6 +560,7 @@ class ConfigurationClassParser {
 			imports.addAll(sourceClass.getAnnotationAttributes(Import.class.getName(), "value"));
 		}
 	}
+	// end::collectImports[]
 
 	private void processImports(ConfigurationClass configClass, SourceClass currentSourceClass,
 			Collection<SourceClass> importCandidates, Predicate<String> filter, boolean checkForCircularImports) {
@@ -564,6 +576,7 @@ class ConfigurationClassParser {
 			this.importStack.push(configClass);
 			try {
 				for (SourceClass candidate : importCandidates) {
+					// 处理 ImportSelector 类型
 					if (candidate.isAssignable(ImportSelector.class)) {
 						// Candidate class is an ImportSelector -> delegate to it to determine imports
 						Class<?> candidateClass = candidate.loadClass();
@@ -582,6 +595,7 @@ class ConfigurationClassParser {
 							processImports(configClass, currentSourceClass, importSourceClasses, filter, false);
 						}
 					}
+					// 处理 ImportBeanDefinitionRegistrar 类型，很多第三方框架，比如 MyBATIS，就是使用这种方式
 					else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
 						// Candidate class is an ImportBeanDefinitionRegistrar ->
 						// delegate to it to register additional bean definitions
@@ -591,6 +605,7 @@ class ConfigurationClassParser {
 										this.environment, this.resourceLoader, this.registry);
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
 					}
+					// 处理直接引入的方式
 					else {
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class

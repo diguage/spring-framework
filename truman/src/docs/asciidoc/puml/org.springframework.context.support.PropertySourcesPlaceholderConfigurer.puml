@@ -1,0 +1,24 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **""PropertySourcesPlaceholderConfigurer"" 继承体系**
+
+
+abstract class PropertiesLoaderSupport {
+	# Properties[] localProperties
+	- Resource[] locations
+}
+
+interface BeanFactoryPostProcessor {
+	+ void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
+}
+
+abstract class PropertyResourceConfigurer extends PropertiesLoaderSupport implements BeanFactoryPostProcessor
+
+abstract class PlaceholderConfigurerSupport extends PropertyResourceConfigurer
+
+class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerSupport
+note bottom of PropertySourcesPlaceholderConfigurer: 从该继承关系图上来看， ""PropertySourcesPlaceholderConfigurer"" 是一个\n ""BeanFactoryPostProcessor""。根据 ""BeanFactoryPostProcessor"" 的特性\n可知，它会在 Spring 容器初始化时、Bean 创建之前，完成对占位符的处理。
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

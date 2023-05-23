@@ -1,0 +1,47 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **""PropertyPlaceholderBeanDefinitionParser - parse"" 时序图 **
+
+
+actor Actor
+
+Actor -> AbstractBeanDefinitionParser: parse
+activate AbstractBeanDefinitionParser
+note right: 实际调用的是 ""PropertyPlaceholderBeanDefinitionParser.parse"" 方法，\n而写 ""AbstractBeanDefinitionParser""，是因为方法就在 ""AbstractBeanDefinitionParser"" 里实现的。
+
+    AbstractBeanDefinitionParser -> AbstractSingleBeanDefinitionParser: parseInternal
+    activate AbstractSingleBeanDefinitionParser
+
+        AbstractSingleBeanDefinitionParser -> PropertyPlaceholderBeanDefinitionParser:getBeanClass
+        activate PropertyPlaceholderBeanDefinitionParser
+        |||
+        AbstractSingleBeanDefinitionParser <- PropertyPlaceholderBeanDefinitionParser:<font color=red>PropertySourcesPlaceholderConfigurer.class</font>
+        deactivate PropertyPlaceholderBeanDefinitionParser
+
+        AbstractSingleBeanDefinitionParser -> PropertyPlaceholderBeanDefinitionParser:doParse
+        activate PropertyPlaceholderBeanDefinitionParser
+        note right: 使用 ""super.doParse"" 调用\n""AbstractPropertyLoadingBeanDefinitionParser""\n中的 ""doParse"" 方法
+
+            PropertyPlaceholderBeanDefinitionParser -> AbstractPropertyLoadingBeanDefinitionParser:doParse
+            activate AbstractPropertyLoadingBeanDefinitionParser
+            note left: 读取 ""location"" 属性
+            |||
+            PropertyPlaceholderBeanDefinitionParser <- AbstractPropertyLoadingBeanDefinitionParser
+            deactivate AbstractPropertyLoadingBeanDefinitionParser
+
+        AbstractSingleBeanDefinitionParser <- PropertyPlaceholderBeanDefinitionParser
+        deactivate PropertyPlaceholderBeanDefinitionParser
+
+    AbstractBeanDefinitionParser <- AbstractSingleBeanDefinitionParser
+    deactivate AbstractSingleBeanDefinitionParser
+
+    AbstractBeanDefinitionParser -> AbstractBeanDefinitionParser:registerBeanDefinition
+    note right: 注册 ""BeanDefinition""
+
+Actor <- AbstractBeanDefinitionParser
+deactivate AbstractBeanDefinitionParser
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

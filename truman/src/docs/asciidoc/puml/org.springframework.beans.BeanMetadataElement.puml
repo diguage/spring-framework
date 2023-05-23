@@ -1,0 +1,98 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **BeanMetadataElement 继承体系**
+
+
+interface BeanMetadataElement {
+    + getSource(): Object
+}
+
+class ManagedProperties implements BeanMetadataElement {
+    + isMergeEnabled(): boolean
+    + merge(Object parent): Object
+}
+
+abstract class MethodOverride implements BeanMetadataElement {
+    # MethodOverride(String methodName)
+    + getMethodName(): String
+    # setOverloaded(boolean overloaded): void
+    # isOverloaded(): boolean
+    + setSource(Object source): void
+    + {abstract} matches(Method method): boolean
+}
+
+class AliasDefinition implements BeanMetadataElement {
+    + getBeanName(): String
+    + getAlias(): String
+}
+
+interface BeanReference extends BeanMetadataElement {
+    + getBeanName(): String
+}
+
+class BeanMetadataAttribute
+BeanMetadataAttribute .right.|> BeanMetadataElement
+
+class BeanMetadataAttributeAccessor implements BeanMetadataElement
+
+interface BeanDefinition extends BeanMetadataElement
+
+class ImportDefinition implements BeanMetadataElement
+
+interface ComponentDefinition extends BeanMetadataElement
+
+class BeanDefinitionHolder implements BeanMetadataElement
+
+interface DefaultsDefinition extends BeanMetadataElement
+
+class TypedStringValue
+TypedStringValue .left.|> BeanMetadataElement
+
+
+class LookupOverride extends MethodOverride {
+    + getBeanName(): String
+}
+
+class ReplaceOverride extends MethodOverride {
+    + getMethodReplacerBeanName(): String
+    + addTypeIdentifier(String identifier): void
+}
+
+
+class RuntimeBeanNameReference implements BeanReference {
+    + setSource(Object source): void
+}
+
+class RuntimeBeanReference implements BeanReference {
+    + isToParent(): boolean
+    + setSource(Object source): void
+}
+
+
+abstract class AbstractComponentDefinition implements ComponentDefinition
+
+
+class BeanComponentDefinition extends BeanDefinitionHolder implements ComponentDefinition
+
+
+class PropertyValue extends BeanMetadataAttributeAccessor
+
+class AutowireCandidateQualifier extends BeanMetadataAttributeAccessor
+
+abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccessor implements BeanDefinition
+
+class CompositeComponentDefinition extends AbstractComponentDefinition
+
+class PointcutComponentDefinition extends AbstractComponentDefinition
+
+class AdvisorComponentDefinition extends AbstractComponentDefinition
+
+class AspectComponentDefinition extends CompositeComponentDefinition
+
+
+class DocumentDefaultsDefinition implements DefaultsDefinition
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml
