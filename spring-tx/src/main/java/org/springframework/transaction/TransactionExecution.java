@@ -54,6 +54,8 @@ public interface TransactionExecution {
 	}
 
 	/**
+	 * 当前事务状态是否是新事务
+	 *
 	 * Return whether the transaction manager considers the present transaction
 	 * as new; otherwise participating in an existing transaction, or potentially
 	 * not running in an actual transaction in the first place.
@@ -97,6 +99,8 @@ public interface TransactionExecution {
 	}
 
 	/**
+	 * 设置当前事务应该回滚，如果设置这个，则commit不起作用
+	 *
 	 * Set the transaction rollback-only. This instructs the transaction manager
 	 * that the only possible outcome of the transaction may be a rollback, as
 	 * alternative to throwing an exception which would in turn trigger a rollback.
@@ -108,6 +112,8 @@ public interface TransactionExecution {
 	}
 
 	/**
+	 * 当前事务是否应该回滚
+	 *
 	 * Return whether the transaction has been marked as rollback-only
 	 * (either by the application or by the transaction infrastructure).
 	 * <p>The default implementation returns {@code false}.
@@ -118,6 +124,8 @@ public interface TransactionExecution {
 	}
 
 	/**
+	 * 当前事务否已经完成
+	 *
 	 * Return whether this transaction is completed, that is,
 	 * whether it has already been committed or rolled back.
 	 * <p>The default implementation returns {@code false}.

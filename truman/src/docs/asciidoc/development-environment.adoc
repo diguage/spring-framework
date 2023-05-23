@@ -1,0 +1,23 @@
+[#development-environment]
+= 开发环境搭建
+
+古人云，千里之行始于足下。既然想开始 Spring 源码分析，首先就需要把 Spring 的源代码下载下来。当然，也可以通过在使用 Spring 的项目中关联 Spring 源码的方式来搞。D瓜哥更偏向前者，所以采用直接下载源码的方式来搞。
+
+俗话说，磨刀不误砍柴工。搞 Spring 源码分析，如果没有一套得心应手的工具，怎么能玩得好呢？所以，本章就从零开始，从安装 Git 开始，一路下来到顺利运行 Spring 的单元测试来介绍一下整套的环境如何搭建。
+
+[NOTE]
+====
+D瓜哥最常用的环境是 {var_os_mac} + IntelliJ IDEA（以下简称为 IDEA）；但是，对国内程序员来说，可能绝大部分使用的还是 {var_os_win} + Eclipse（含 MyEclipse，以下统称为 Eclipse）。所以，在文中以 {var_os_mac} + IDEA 为主，同时也会兼顾一下使用 {var_os_win} + Eclipse 的情况。
+
+Linux 方面，D瓜哥窃以为使用 {var_os_linux} 会比较多一些。所以，会以 {var_os_linux} 为样板来描述。其他版本的 Linux 发行版，请自行解决。
+====
+
+include::{includedir}/install-git.adoc[leveloffset=+1]
+
+include::{includedir}/clone-spring-source.adoc[leveloffset=+1]
+
+include::{includedir}/import-into-eclipse.adoc[leveloffset=+1]
+
+include::{includedir}/import-into-idea.adoc[leveloffset=+1]
+
+include::{includedir}/change-gradle-maven-repo-url.adoc[leveloffset=+1]

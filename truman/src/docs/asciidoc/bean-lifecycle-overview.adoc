@@ -1,0 +1,169 @@
+= Bean 生命周期概述
+
+:sectnumlevels: 3
+:source-highlighter: pygments
+:pygments-style: monokai
+:pygments-linenums-mode: table
+
+在 https://www.diguage.com/post/spring-startup-process-overview/[Spring 启动流程概述^] 中，分析了 Spring 的启动流程。本文就来说明一下 Spring Bean 整个生命周期。如果有不清楚的地方，可以参考上文的“附录：启动日志”。
+
+直接上图：Spring Bean 生命周期流程图。内容较多，图片文字偏小，请放大看（矢量图，可以任意放大）：
+
+image::images/spring-bean-lifecycle.svg[{image_attr},title="Spring Bean 生命周期流程图",alt="Spring Bean 生命周期流程图"]
+
+下面是文字说明。
+
+== Bean 生命周期简述
+
+. 调用 `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation`，主要是判断 `AnnotationAwareAspectJAutoProxyCreator` 是否可以生成代理。
+. 调用构造函数
+. 调用 `MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition`，主要是通过 `CommonAnnotationBeanPostProcessor`、 `AutowiredAnnotationBeanPostProcessor` 收集依赖信息。
+. [.line-through]#`InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation`，这步什么也没做。#
+. 调用 `InstantiationAwareBeanPostProcessor#postProcessProperties`，主要是完成依赖注入。
+. 调用 `AutowiredAnnotationBeanPostProcessor#setBeanFactory`，注入 `BeanFactory` 等相关信息。
+. 调用 `BeanPostProcessor#postProcessBeforeInitialization`，主要是注入 `ApplicationContext` 等相关信息。
+. 调用 `InitializingBean#afterPropertiesSet`、 `init-method` 方法
+. 调用 `BeanPostProcessor#postProcessAfterInitialization`，主要是生成 AOP 代理类。
+
+== Bean 生命周期详解
+
+从 `getBean()` 方法获取 Bean 时，如果缓存中没有对应的 Bean，则会创建 Bean，整个流程如下：
+
+. `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation` -- 目前有如下四个：
+.. `ImportAwareBeanPostProcessor` -- 继承父类实现，无所事事。 
+.. `AnnotationAwareAspectJAutoProxyCreator` -- 继承父类实现，判断是否属于基础切面类，如果有指定的 Target 则生成代理。
+.. `CommonAnnotationBeanPostProcessor` -- 无所事事。
+.. `AutowiredAnnotationBeanPostProcessor` -- 继承父类实现，无所事事。
+. 构造函数
+. [#post-process-merged-bean-definition]`MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition` -- 目前有如下三个：
+.. `CommonAnnotationBeanPostProcessor` -- 收集 `@Resource` 依赖信息，`initMethods` 和 `destroyMethods` 等信息。(就是 `@PostConstruct` 和 `@PreDestroy` 标注的方法。)这些信息被缓存到了 `this.injectionMetadataCache` 变量中，注入时从这个变量中取值。
+.. `AutowiredAnnotationBeanPostProcessor` -- 收集 `@Autowired` 的依赖信息。这些信息被缓存到了 `this.injectionMetadataCache` 变量中，注入时从这个变量中取值。
+.. `ApplicationListenerDetector` -- 判断 Bean 是否是一个 `ApplicationListener`，是则保留，在后面的 `postProcessAfterInitialization` 方法中，加入到容器的 `applicationListeners` 中。
+. `InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation` -- 与上面的 `postProcessBeforeInstantiation` 方法对应，目前有如下四个：
+.. `ImportAwareBeanPostProcessor` -- 继承父类实现，无所事事。
+.. `AnnotationAwareAspectJAutoProxyCreator` -- 继承父类实现，无所事事。
+.. `CommonAnnotationBeanPostProcessor` -- 无所事事。
+.. `AutowiredAnnotationBeanPostProcessor` -- 无所事事。
+. `InstantiationAwareBeanPostProcessor#postProcessProperties` -- 目前有如下三个：
+.. `ImportAwareBeanPostProcessor` -- 如果 Bean 是 `EnhancedConfiguration`（它继承了 `BeanFactoryAware`） 的实现类，则注入 `BeanFactory`。
+.. `AnnotationAwareAspectJAutoProxyCreator` -- 无所事事。
+.. `CommonAnnotationBeanPostProcessor` -- 完成 `@Resource` 依赖注入。
++
+在这里会递归创建所依赖 Bean。调试代码，弄清楚。
++
+.. `AutowiredAnnotationBeanPostProcessor` -- 完成 `@Autowired` 和 `@Value` 注入
+. `InstantiationAwareBeanPostProcessor#postProcessPropertyValues` -- 从 5.1 开始废弃，使用上面方法代替。 
++
+WARNING: 这里要注意，并不是执行完四个类的 `postProcessProperties` 方法，再去执行四个类的 `postProcessPropertyValues` 方法。而是以类为顺序的，执行完一个类的 `postProcessProperties` 方法，然后去执行 `postProcessPropertyValues` 方法。执行完一个类，再去执行下一个类。这个现象在下面的日志中有反应。
++
+. `AutowiredAnnotationBeanPostProcessor#setBeanFactory(DefaultListableBeanFactory)` -- 通过 `AbstractAutowireCapableBeanFactory#invokeAwareMethods` 方法如下 `Aware` 注入：
+.. `BeanNameAware`
+.. `BeanClassLoaderAware`
+.. `BeanFactoryAware`
+. `BeanPostProcessor#postProcessBeforeInitialization` -- 目前有
+.. 用户手动添加的 `BeanPostProcessor`
+.. `ApplicationContextAwareProcessor` -- 完成如下六个 `Aware` 的注入：
+... `EnvironmentAware`
+... `EmbeddedValueResolverAware`
+... `ResourceLoaderAware`
+... `ApplicationEventPublisherAware`
+... `MessageSourceAware`
+... `ApplicationContextAware`
+.. `ImportAwareBeanPostProcessor` -- 如果实现了 `ImportAware` 接口，则注入 `importMetadata` 信息。
+.. `BeanPostProcessorChecker` -- 无所事事。
+.. `AnnotationAwareAspectJAutoProxyCreator` -- 无所事事。
+.. `CommonAnnotationBeanPostProcessor` -- 要调用 `LifecycleMetadata#invokeInitMethods` 方法，但是，里面去没有任何实现，似乎调用了全局设置的初始化操作。需要找文档确认一下。
+.. `AutowiredAnnotationBeanPostProcessor` -- 继承父类实现，无所事事。
+.. `ApplicationListenerDetector` -- 无所事事。
+. `InitializingBean#afterPropertiesSet()`
+. `init-method`
+[#after-initialization]
+. `BeanPostProcessor#postProcessAfterInitialization` 方法 -- 目前有
+.. 用户手动添加的 `BeanPostProcessor`
+.. `ApplicationContextAwareProcessor` -- 继承默认实现，无所事事。
+.. `ImportAwareBeanPostProcessor` -- 继承默认实现，无所事事。
+.. `BeanPostProcessorChecker` -- 如果 Bean 是 `BeanPostProcessor` 子类，则检查 `BeanPostProcessor` 数量。
+.. `AnnotationAwareAspectJAutoProxyCreator` -- 检查 Bean 和提前暴露的引用是否相同，不同则重新生成代理对象。**注意：绝大部分的 AOP 代理生成都是在这个方法中完成的。**在 https://www.diguage.com//post/spring-aop-bootstrap/[Spring AOP 源码分析：入门] 中有更详细的说明。
+.. `CommonAnnotationBeanPostProcessor` -- 继承父类实现，无所事事。 
+.. `AutowiredAnnotationBeanPostProcessor` -- 继承父类实现，无所事事。 
+.. `ApplicationListenerDetector` -- 将 `ApplicationListener` 类型的 Bean，加入到容器的 `applicationListeners` 中，方便容器开始监听。
+
+初始化之前，似乎可以设置全局的初始化操作。忘了具体在哪个类中了？
+
+== Bean 生命周期补充说明
+
+下面对创建 Bean 的流程做进一步说明：
+
+=== `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation`
+
+通过 `AbstractAutowireCapableBeanFactory#resolveBeforeInstantiation` 方法，调用 `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation` 方法。遍历 `InstantiationAwareBeanPostProcessor` 列表(`getBeanPostProcessorCache().instantiationAware` 变量)时，如果返回值不为空，则立即返回，不再继续调用。不为空，则表示创建了 Bean 对象，然后马上调用 `BeanPostProcessor#postProcessAfterInitialization` 方法。如果这里创建对象，则直接返回该对象，不再进行下面的调用。有四个 `InstantiationAwareBeanPostProcessor` 对象：
+
+. `ConfigurationClassPostProcessor`
+. `AnnotationAwareAspectJAutoProxyCreator`
+. `CommonAnnotationBeanPostProcessor`
+. `AutowiredAnnotationBeanPostProcessor`
+
+=== Bean 的构造函数
+
+=== `MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition`
+
+通过 `AbstractAutowireCapableBeanFactory#applyMergedBeanDefinitionPostProcessors` 调用 `MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition` 方法。变量： `getBeanPostProcessorCache().mergedDefinition`。__这个方法主要干什么？通过 `CommonAnnotationBeanPostProcessor#applyMergedBeanDefinitionPostProcessors` 调用 `CommonAnnotationBeanPostProcessor#findResourceMetadata` 可以看出，这个地方可以获取依赖信息。带验证。__系统中有如下四个类： 
+
+. `CommonAnnotationBeanPostProcessor`
+. `AutowiredAnnotationBeanPostProcessor`
+. `ApplicationListenerDetector`
+. `InitDestroyAnnotationBeanPostProcessor` -- 这个有吗？没有加入到变量中。
+
+=== `InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation`
+
+有一点重要的信息，日志中没有体现出来。设置 Bean 的属性是在执行 `BeanPostProcessor` 调用之前完成的。在 `AbstractAutowireCapableBeanFactory#doCreateBean` 方法中，调用了 `AbstractAutowireCapableBeanFactory#populateBean` 方法来设置属性，然后去调用的 `BeanPostProcessor` 和 `init` 方法。`populateBean` 方法是通过调用 `InstantiationAwareBeanPostProcessor#postProcessProperties` 方法来完成注入，其中 `CommonAnnotationBeanPostProcessor`，`AutowiredAnnotationBeanPostProcessor` 分别处理不同的注解。下面是 `populateBean` 方法更详细的说明。
+
+在注入 Bean 属性之前，调用 `InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation`。（从变量 `getBeanPostProcessorCache().instantiationAware` 中获取列表。）容器完成初始化后，有 `ImportAwareBeanPostProcessor`，`AnnotationAwareAspectJAutoProxyCreator`， `CommonAnnotationBeanPostProcessor`，`AutowiredAnnotationBeanPostProcessor` 四个 `InstantiationAwareBeanPostProcessor` 对象。但是，这四个类，没有做任何操作。如果返回值为 `false` 则中断，不再继续遍历 `InstantiationAwareBeanPostProcessor` 列表。
+
+. `ConfigurationClassPostProcessor`
+. `AnnotationAwareAspectJAutoProxyCreator`
+. `CommonAnnotationBeanPostProcessor`
+. `AutowiredAnnotationBeanPostProcessor`
+
+=== `InstantiationAwareBeanPostProcessor#postProcessProperties`
+
+接着调用 `InstantiationAwareBeanPostProcessor#postProcessProperties` 方法来完成属性注入。
+
+=== `InstantiationAwareBeanPostProcessor#postProcessPropertyValues`
+
+然后再执行 `InstantiationAwareBeanPostProcessor#postProcessPropertyValues`。这个方法马上从 5.1 开始要废弃掉，使用上述 `postProcessProperties` 代替。
+
+到这里 `populateBean` 方法结束。
+
+=== `AutowiredAnnotationBeanPostProcessor#setBeanFactory(DefaultListableBeanFactory)`
+
+`@Autowired` 是先进行类型注入。如果发现多个匹配的 Bean，那么再根据变量名称进行筛选。
+
+.`org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#doCreateBean`
+[{java_src_attr},highlight=20..48]
+----
+include::{beans_src_dir}/factory/support/DefaultListableBeanFactory.java[tag=doResolveDependency]
+----
+
+
+=== `BeanPostProcessor#postProcessBeforeInitialization`
+
+调用 `BeanPostProcessor#postProcessBeforeInitialization` 方法。
+
+=== `InitializingBean#afterPropertiesSet()`
+
+=== `init-method`
+
+`init` 方法。
+
+=== `BeanPostProcessor#postProcessAfterInitialization`
+
+调用 `BeanPostProcessor#postProcessAfterInitialization` 方法。
+
+== Bean 销毁流程
+
+. 调用 `beanFactory.destroyBean(bean)` 方法，开始销毁 Bean。
+. 调用 `DestructionAwareBeanPostProcessor#postProcessBeforeDestruction(Object bean, String beanName)` -- `ApplicationListenerDetector` 就是一个 `DestructionAwareBeanPostProcessor`。但是，Bean 销毁时，不知道为什么没有被调用。
+. 调用 `DisposableBean#destroy()` 方法
+. 如果还有 `destroy-method`，接着通过反射调用 `destroy-method` 方法。
+

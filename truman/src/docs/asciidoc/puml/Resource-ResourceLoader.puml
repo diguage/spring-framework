@@ -1,0 +1,39 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **Resource 与 ResourceLoader**
+
+
+interface InputStreamSource {
+	+ getInputStream():InputStream
+}
+
+interface Resource extends InputStreamSource
+
+interface ResourceLoader {
+	+{static} String CLASSPATH_URL_PREFIX = "classpath:"
+
+	+ getResource(String location):Resource
+	+ getClassLoader():ClassLoader
+}
+
+note top of ResourceLoader : 加载单个 Resource
+
+class DefaultResourceLoader implements ResourceLoader
+class FileSystemResourceLoader extends DefaultResourceLoader
+
+interface ResourcePatternResolver extends ResourceLoader {
+	+{static} CLASSPATH_ALL_URL_PREFIX = "classpath*:"
+
+	+ getResources(String locationPattern):Resource[]
+}
+
+class PathMatchingResourcePatternResolver implements ResourcePatternResolver
+
+note top of ResourcePatternResolver : 可以批量加载\nResource
+
+ResourceLoader *- Resource
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

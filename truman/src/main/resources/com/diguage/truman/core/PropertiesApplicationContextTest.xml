@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans.xsd
+          http://www.springframework.org/schema/context
+          https://www.springframework.org/schema/context/spring-context.xsd">
+
+  <!-- @author D瓜哥 · https://www.diguage.com -->
+
+  <context:annotation-config/>
+
+  <bean class="com.diguage.truman.core.PropertiesLoaderSupportTest.UserService"/>
+
+  <context:property-placeholder
+      location="classpath:com/diguage/truman/core/token.properties"/>
+
+  <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+    <property name="locations">
+      <list>
+        <value>classpath:com/diguage/truman/core/token.properties</value>
+      </list>
+    </property>
+  </bean>
+
+  <bean class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+    <property name="locations">
+      <list>
+        <value>classpath:com/diguage/truman/core/token.properties</value>
+      </list>
+    </property>
+  </bean>
+</beans>

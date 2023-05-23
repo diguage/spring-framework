@@ -1,0 +1,44 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **Spring 容器内事件发布实现类图**
+
+
+abstract class ApplicationEvent extends EventObject
+note top of EventObject : JDK 内置事件类型
+note top of ApplicationEvent : Spring 容器内\n自定义事件类型
+
+interface ApplicationListener<E extends ApplicationEvent> extends EventListener {
+    + onApplicationEvent(E event):void
+}
+
+interface ApplicationEventPublisher {
+    + publishEvent(ApplicationEvent event):void
+    + publishEvent(Object event):void
+}
+interface ApplicationContext extends ApplicationEventPublisher
+
+interface ConfigurableApplicationContext extends ApplicationContext
+
+abstract class AbstractApplicationContext implements ConfigurableApplicationContext {
+ - applicationEventMulticaster:ApplicationEventMulticaster
+}
+
+interface ApplicationEventMulticaster
+
+ApplicationEventMulticaster .right.> ApplicationListener : notify
+
+ApplicationEventMulticaster .up.> ApplicationEvent : publish
+
+ApplicationListener .up.> ApplicationEvent : receive
+
+abstract class AbstractApplicationEventMulticaster implements ApplicationEventMulticaster
+
+class SimpleApplicationEventMulticaster extends AbstractApplicationEventMulticaster {
+    - taskExecutor:Executor
+}
+
+AbstractApplicationContext *--> ApplicationEventMulticaster
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

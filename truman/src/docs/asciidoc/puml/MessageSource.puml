@@ -1,0 +1,38 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **MessageSource 类层次结构**
+
+
+interface HierarchicalMessageSource extends MessageSource
+
+interface ApplicationContext extends MessageSource
+
+interface ConfigurableApplicationContext extends ApplicationContext
+
+abstract class AbstractApplicationContext implements ConfigurableApplicationContext {
+    - messageSource:MessageSource
+}
+
+abstract class AbstractMessageSource implements HierarchicalMessageSource
+
+class StaticMessageSource extends AbstractMessageSource
+note bottom of StaticMessageSource : 多用于测试
+
+abstract class AbstractResourceBasedMessageSource extends AbstractMessageSource
+
+class ResourceBundleMessageSource extends AbstractResourceBasedMessageSource
+
+note bottom of ResourceBundleMessageSource : 常用
+
+class ReloadableResourceBundleMessageSource extends AbstractResourceBasedMessageSource implements ResourceLoaderAware
+
+class DelegatingMessageSource implements HierarchicalMessageSource
+
+note bottom of DelegatingMessageSource : Spring 内部使用该类，启动时\nAbstractApplicationContext\n.initMessageSource 注册该实例
+
+AbstractApplicationContext *--> DelegatingMessageSource : has a >
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

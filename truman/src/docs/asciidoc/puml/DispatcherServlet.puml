@@ -1,0 +1,42 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **DispatcherServlet 继承结构**
+
+
+abstract class GenericServlet implements Servlet, ServletConfig, java.io.Serializable
+
+abstract class HttpServlet extends GenericServlet
+
+abstract class HttpServletBean extends HttpServlet implements EnvironmentCapable, EnvironmentAware {
+    + init(): void
+}
+note right of HttpServletBean : 通过 init() 方法\n开始启动容器
+
+abstract class FrameworkServlet extends HttpServletBean implements ApplicationContextAware {
+    + initServletBean(): void
+    + initWebApplicationContext(): WebApplicationContext
+    + configureAndRefreshWebApplicationContext(wac: ConfigurableWebApplicationContext): void
+    + onRefresh(context: ApplicationContext): void
+}
+note right of FrameworkServlet : 在 initServletBean() 中\n真正完成初始化容器工作
+
+class DispatcherServlet extends FrameworkServlet {
+    __
+    + initStrategies(context: ApplicationContext): void
+    .. 九大组件 ..
+    + initMultipartResolver(context: ApplicationContext): void
+    + initLocaleResolver(context: ApplicationContext): void
+    + initThemeResolver(context: ApplicationContext): void
+    + initHandlerMappings(context: ApplicationContext): void
+    + initHandlerAdapters(context: ApplicationContext): void
+    + initHandlerExceptionResolvers(context: ApplicationContext): void
+    + initRequestToViewNameTranslator(context: ApplicationContext): void
+    + initViewResolvers(context: ApplicationContext): void
+    + initFlashMapManager(context: ApplicationContext): void
+}
+note right of DispatcherServlet : 通过事件触发 onRefresh 方法，然后调用\ninitStrategies 初始化 SpringMVC 的九大组件
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

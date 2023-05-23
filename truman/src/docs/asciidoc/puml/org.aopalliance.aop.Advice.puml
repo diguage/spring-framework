@@ -1,0 +1,56 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **Advice 继承体系**
+
+
+interface Advice
+
+interface Interceptor extends Advice
+
+interface BeforeAdvice extends Advice
+
+interface DynamicIntroductionAdvice extends Advice
+
+abstract class AbstractAspectJAdvice implements Advice
+
+interface AfterAdvice extends Advice
+
+interface ConstructorInterceptor extends Interceptor {
+    + construct(ConstructorInvocation invocation): Object
+}
+
+interface MethodInterceptor extends Interceptor {
+    + invoke(MethodInvocation invocation): Object
+}
+
+
+
+interface IntroductionInterceptor extends MethodInterceptor, DynamicIntroductionAdvice
+
+interface MethodBeforeAdvice extends BeforeAdvice
+
+class MethodBeforeAdviceInterceptor implements MethodInterceptor, BeforeAdvice
+
+
+class DelegatingIntroductionInterceptor implements IntroductionInterceptor
+
+class AfterReturningAdviceInterceptor implements MethodInterceptor, AfterAdvice
+
+interface ThrowsAdvice extends AfterAdvice
+
+class AspectJAfterAdvice extends AbstractAspectJAdvice implements MethodInterceptor, AfterAdvice
+
+class AspectJAfterReturningAdvice extends AbstractAspectJAdvice implements AfterReturningAdvice, AfterAdvice
+
+class AspectJAfterThrowingAdvice extends AbstractAspectJAdvice implements MethodInterceptor, AfterAdvice
+
+class ThrowsAdviceInterceptor implements MethodInterceptor, AfterAdvice
+
+interface AfterReturningAdvice extends AfterAdvice
+
+class AspectJMethodBeforeAdvice extends AbstractAspectJAdvice implements MethodBeforeAdvice
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

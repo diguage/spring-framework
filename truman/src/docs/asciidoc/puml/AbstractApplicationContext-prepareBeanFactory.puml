@@ -1,0 +1,168 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **AbstractApplicationContext.prepareBeanFactory -- 准备 ""BeanFactory""**
+
+
+actor Actor
+participant AbstractApplicationContext << (C,#ADD1B2) >>
+participant DefaultListableBeanFactory << (C,#ADD1B2) >>
+
+Actor -> AbstractApplicationContext: ""refresh""\n重塑容器
+activate AbstractApplicationContext
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""prepareBeanFactory""\n准备 ""BeanFactory""
+  activate AbstractApplicationContext
+
+      AbstractApplicationContext -> DefaultListableBeanFactory: ""setBeanClassLoader""\n设置类加载器
+      activate DefaultListableBeanFactory
+      |||
+      AbstractApplicationContext <- DefaultListableBeanFactory
+      deactivate DefaultListableBeanFactory
+
+      |||
+
+      AbstractApplicationContext -> DefaultListableBeanFactory: ""setBeanExpressionResolver""\n设置Spring表达式解析器
+      activate DefaultListableBeanFactory
+      note over AbstractApplicationContext,DefaultListableBeanFactory: ""StandardBeanExpressionResolver""
+      AbstractApplicationContext <- DefaultListableBeanFactory
+      deactivate DefaultListableBeanFactory
+
+      |||
+
+      AbstractApplicationContext -> DefaultListableBeanFactory: ""addPropertyEditorRegistrar""\n添加默认 ""PropertyEditor""
+      activate DefaultListableBeanFactory
+      note over AbstractApplicationContext,DefaultListableBeanFactory: ""ResourceEditorRegistrar""
+      AbstractApplicationContext <- DefaultListableBeanFactory
+      deactivate DefaultListableBeanFactory
+
+      |||
+
+      AbstractApplicationContext -> DefaultListableBeanFactory: ""addBeanPostProcessor""\n添加 ""BeanPostProcessor""
+      activate DefaultListableBeanFactory
+      note over AbstractApplicationContext,DefaultListableBeanFactory: ""ApplicationContextAwareProcessor""\n处理各种 ""Aware"" 接口，比如 ""ApplicationContextAware"" 等
+      AbstractApplicationContext <- DefaultListableBeanFactory
+      deactivate DefaultListableBeanFactory
+
+      |||
+
+      AbstractApplicationContext -> DefaultListableBeanFactory: ""ignoreDependencyInterface""\n添加“依赖忽略接口”
+      activate DefaultListableBeanFactory
+      note over AbstractApplicationContext,DefaultListableBeanFactory: 忽略各种 ""Aware"" 接口，\n这些接口由上述 ""ApplicationContextAwareProcessor"" 处理，\n不需要再执行依赖注入。
+      AbstractApplicationContext <- DefaultListableBeanFactory
+      deactivate DefaultListableBeanFactory
+
+      |||
+
+      AbstractApplicationContext -> DefaultListableBeanFactory: ""registerResolvableDependency""\n添加“可解析的依赖”
+      activate DefaultListableBeanFactory
+      note over AbstractApplicationContext,DefaultListableBeanFactory: ""BeanFactory""、""ResourceLoader""、\n""ApplicationEventPublisher""、""ApplicationContext""
+      AbstractApplicationContext <- DefaultListableBeanFactory
+      deactivate DefaultListableBeanFactory
+
+      |||
+
+      AbstractApplicationContext -> DefaultListableBeanFactory: ""addBeanPostProcessor""\n添加 ""BeanPostProcessor""
+      activate DefaultListableBeanFactory
+      note over AbstractApplicationContext,DefaultListableBeanFactory: ""ApplicationListenerDetector""\n探测 Bean 是否为 ""ApplicationListener""
+      AbstractApplicationContext <- DefaultListableBeanFactory
+      deactivate DefaultListableBeanFactory
+
+      |||
+
+      alt 不是 Native 镜像 && 包含了 loadTimeWeaver Bean
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""addBeanPostProcessor""\n添加 ""BeanPostProcessor""
+          activate DefaultListableBeanFactory
+          note over AbstractApplicationContext,DefaultListableBeanFactory: ""LoadTimeWeaverAwareProcessor""\n加载时织入
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+
+          |||
+
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""setTempClassLoader""\n设置临时类加载器
+          activate DefaultListableBeanFactory
+          note over AbstractApplicationContext,DefaultListableBeanFactory: ""ContextTypeMatchClassLoader""
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+      end
+
+      |||
+
+      alt ""BeanFactory"" 实例中不含 ""environment""
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""containsLocalBean""\n是否包含 ""environment""
+          activate DefaultListableBeanFactory
+          |||
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+
+          |||
+
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""registerSingleton""\n注册 Bean
+          activate DefaultListableBeanFactory
+          note over AbstractApplicationContext,DefaultListableBeanFactory: ""environment"" // 此为 Bean 名称
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+      end
+
+      |||
+
+      alt ""BeanFactory"" 实例中不含 ""systemProperties""
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""containsLocalBean""\n是否包含 ""systemProperties""
+          activate DefaultListableBeanFactory
+          |||
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+
+          |||
+
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""registerSingleton""\n注册 Bean
+          activate DefaultListableBeanFactory
+          note over AbstractApplicationContext,DefaultListableBeanFactory: ""systemProperties"" // 此为 Bean 名称
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+      end
+
+      |||
+
+      alt ""BeanFactory"" 实例中不含 ""systemEnvironment""
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""containsLocalBean""\n是否包含 ""systemEnvironment""
+          activate DefaultListableBeanFactory
+          |||
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+
+          |||
+
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""registerSingleton""\n注册 Bean
+          activate DefaultListableBeanFactory
+          note over AbstractApplicationContext,DefaultListableBeanFactory: ""systemEnvironment"" // 此为 Bean 名称
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+      end
+
+      |||
+
+      alt ""BeanFactory"" 实例中不含 ""applicationStartup""
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""containsLocalBean""\n是否包含 ""applicationStartup""
+          activate DefaultListableBeanFactory
+          |||
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+
+          |||
+
+          AbstractApplicationContext -> DefaultListableBeanFactory: ""registerSingleton""\n注册 Bean
+          activate DefaultListableBeanFactory
+          note over AbstractApplicationContext,DefaultListableBeanFactory: ""applicationStartup"" // 此为 Bean 名称
+          AbstractApplicationContext <- DefaultListableBeanFactory
+          deactivate DefaultListableBeanFactory
+      end
+
+  AbstractApplicationContext -> AbstractApplicationContext
+  deactivate AbstractApplicationContext
+
+Actor <- AbstractApplicationContext: 完成容器初始化
+deactivate AbstractApplicationContext
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

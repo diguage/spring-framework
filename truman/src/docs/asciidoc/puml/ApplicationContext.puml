@@ -1,0 +1,20 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **""ApplicationContext""的组成**
+card ApplicationContext {
+    card AnnotatedBeanDefinitionReader
+    card ClassPathBeanDefinitionScanner
+    card DefaultListableBeanFactory {
+        card dependencyComparator
+        card autowireCandidateResolver
+    }
+}
+
+AnnotatedBeanDefinitionReader -[hidden]-> ClassPathBeanDefinitionScanner
+ClassPathBeanDefinitionScanner -[hidden]-> DefaultListableBeanFactory
+
+dependencyComparator -[hidden]-> autowireCandidateResolver
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

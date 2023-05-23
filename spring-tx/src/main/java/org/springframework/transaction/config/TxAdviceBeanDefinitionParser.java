@@ -73,8 +73,10 @@ class TxAdviceBeanDefinitionParser extends AbstractSingleBeanDefinitionParser {
 
 	@Override
 	protected void doParse(Element element, ParserContext parserContext, BeanDefinitionBuilder builder) {
+		// 将配置的事务管理器添加到属性
 		builder.addPropertyReference("transactionManager", TxNamespaceHandler.getTransactionManagerName(element));
 
+		// 获取tx的子标签<tx:attributes> 。这里明确规定了只能有一个子标签
 		List<Element> txAttributes = DomUtils.getChildElementsByTagName(element, ATTRIBUTES_ELEMENT);
 		if (txAttributes.size() > 1) {
 			parserContext.getReaderContext().error(
@@ -83,7 +85,10 @@ class TxAdviceBeanDefinitionParser extends AbstractSingleBeanDefinitionParser {
 		else if (txAttributes.size() == 1) {
 			// Using attributes source.
 			Element attributeSourceElement = txAttributes.get(0);
+			// 解析事务方法的属性。也就是标签<tx:method name="insert*"/>
 			RootBeanDefinition attributeSourceDefinition = parseAttributeSource(attributeSourceElement, parserContext);
+			// 将NameMatchTransactionAttributeSource类的实例添加到属性中。
+			// NameMatchTransactionAttributeSource是一个包含了所有的事务属性的实例
 			builder.addPropertyValue("transactionAttributeSource", attributeSourceDefinition);
 		}
 		else {
@@ -94,11 +99,15 @@ class TxAdviceBeanDefinitionParser extends AbstractSingleBeanDefinitionParser {
 	}
 
 	private RootBeanDefinition parseAttributeSource(Element attrEle, ParserContext parserContext) {
+		// 获取所有的子标签tx:method
+		// 比如<tx:method name="insert*" propagation="REQUIRED" rollback-for="java.lang.Throwable"/>
 		List<Element> methods = DomUtils.getChildElementsByTagName(attrEle, METHOD_ELEMENT);
+		// 事务属性的Map
 		ManagedMap<TypedStringValue, RuleBasedTransactionAttribute> transactionAttributeMap =
 				new ManagedMap<>(methods.size());
 		transactionAttributeMap.setSource(parserContext.extractSource(attrEle));
 
+		// 将method标签里面的name为key，其他的事务属性为value加入Map
 		for (Element methodEle : methods) {
 			String name = methodEle.getAttribute(METHOD_NAME_ATTRIBUTE);
 			TypedStringValue nameHolder = new TypedStringValue(name);

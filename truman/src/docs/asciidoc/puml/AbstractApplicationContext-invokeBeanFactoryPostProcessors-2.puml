@@ -1,0 +1,248 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **""BeanDefinitionRegistryPostProcessor & BeanFactoryPostProcessor"" 调用过程**
+
+
+actor Actor
+participant AbstractApplicationContext << (A,#AADCDF) >>
+participant PostProcessorRegistrationDelegate << (C,#ADD1B2) >>
+participant BeanDefinitionRegistryPostProcessor << (I,#AB9DE1) >>
+participant BeanFactoryPostProcessor << (I,#AB9DE1) >>
+
+Actor -> AbstractApplicationContext: ""refresh""\n重塑容器
+activate AbstractApplicationContext
+
+    |||
+
+    AbstractApplicationContext -> AbstractApplicationContext: ""invokeBeanFactoryPostProcessors""
+    activate AbstractApplicationContext #53E516
+        AbstractApplicationContext -> PostProcessorRegistrationDelegate:
+        activate PostProcessorRegistrationDelegate
+            loop #D5E8D4 **遍历所有在 refresh 之前添加的 ""BeanDefinitionRegistryPostProcessor"" 实例**
+
+                |||
+
+                PostProcessorRegistrationDelegate -> BeanDefinitionRegistryPostProcessor: ""postProcessBeanDefinitionRegistry""\n向容器添加 Bean 的定义（也可删除、修改）
+                activate BeanDefinitionRegistryPostProcessor
+                note right: 默认为空。这里是直接获取一个 `List` 类型的对象。可以在在执行\n""refresh"" 之前，通过调用 "AbstractApplicationContext"\n"".addBeanFactoryPostProcessor"" 方法添加。
+
+                |||
+
+                PostProcessorRegistrationDelegate <- BeanDefinitionRegistryPostProcessor
+                deactivate BeanDefinitionRegistryPostProcessor
+
+                |||
+
+            end
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序 ""BeanDefinitionRegistryPostProcessor"" 实现类
+            activate PostProcessorRegistrationDelegate #FF33FF
+            |||
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            loop #F8CECC **遍历所有实现 ""PriorityOrdered"" 接口的 ""BeanDefinitionRegistryPostProcessor"" 实例**
+
+                |||
+
+                PostProcessorRegistrationDelegate -> BeanDefinitionRegistryPostProcessor: ""postProcessBeanDefinitionRegistry""\n向容器添加 Bean 的定义（也可删除、修改）
+                activate BeanDefinitionRegistryPostProcessor
+                note over PostProcessorRegistrationDelegate,BeanDefinitionRegistryPostProcessor: 实现 ""PriorityOrdered"" 接口的 ""BeanDefinitionRegistryPostProcessor"" 实例
+                PostProcessorRegistrationDelegate <- BeanDefinitionRegistryPostProcessor
+                deactivate BeanDefinitionRegistryPostProcessor
+
+                |||
+
+            end
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序 ""BeanDefinitionRegistryPostProcessor"" 实现类
+            activate PostProcessorRegistrationDelegate #FF33FF
+            |||
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            loop #FFF2CC **遍历所有实现 ""Ordered"" 接口的 ""BeanDefinitionRegistryPostProcessor"" 实例**
+
+                |||
+
+                PostProcessorRegistrationDelegate -> BeanDefinitionRegistryPostProcessor: ""postProcessBeanDefinitionRegistry""\n向容器添加 Bean 的定义（也可删除、修改）
+                activate BeanDefinitionRegistryPostProcessor
+                note over PostProcessorRegistrationDelegate,BeanDefinitionRegistryPostProcessor: 实现 ""Ordered"" 接口的 ""BeanDefinitionRegistryPostProcessor"" 实例
+                PostProcessorRegistrationDelegate <- BeanDefinitionRegistryPostProcessor
+                deactivate BeanDefinitionRegistryPostProcessor
+
+                |||
+
+            end
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序 ""BeanDefinitionRegistryPostProcessor"" 实现类
+            activate PostProcessorRegistrationDelegate #FF33FF
+            |||
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            loop #DAE8FC **“递归”遍历剩余所有 ""BeanDefinitionRegistryPostProcessor"" 实例**
+
+                |||
+
+                note over PostProcessorRegistrationDelegate,BeanDefinitionRegistryPostProcessor: 在添加 ""BeanDefinition"" 的过程中，有可能有新加入的 ""BeanDefinitionRegistryPostProcessor"" 类型的 Bean，\n所以要递归调用这个过程，以求把所有的 ""BeanDefinitionRegistryPostProcessor"" 类型的 Bean 都执行到。
+
+                |||
+
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序 ""BeanDefinitionRegistryPostProcessor"" 实现类
+                activate PostProcessorRegistrationDelegate #FF33FF
+                |||
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+                deactivate PostProcessorRegistrationDelegate
+
+                |||
+
+                loop #DDFFFF **遍历剩余的 ""BeanDefinitionRegistryPostProcessor"" 实例**
+
+                    |||
+
+                    PostProcessorRegistrationDelegate -> BeanDefinitionRegistryPostProcessor: ""postProcessBeanDefinitionRegistry""\n向容器添加 Bean 的定义（也可删除、修改）
+                    activate BeanDefinitionRegistryPostProcessor
+                    note over PostProcessorRegistrationDelegate,BeanDefinitionRegistryPostProcessor: 剩余所有的 ""BeanDefinitionRegistryPostProcessor"" 实例
+                    PostProcessorRegistrationDelegate <- BeanDefinitionRegistryPostProcessor
+                    deactivate BeanDefinitionRegistryPostProcessor
+
+                    |||
+
+                end
+
+                |||
+
+            end
+
+            |||
+
+            loop #E1D5E7 **遍历所有 ""BeanDefinitionRegistryPostProcessor"" 实例**
+
+                |||
+
+                note over PostProcessorRegistrationDelegate,BeanFactoryPostProcessor: 由于 ""BeanDefinitionRegistryPostProcessor"" 继承了 ""BeanFactoryPostProcessor""。\n所以，所有的 ""BeanDefinitionRegistryPostProcessor"" 实例，也是 ""BeanFactoryPostProcessor"" 实例。
+
+                |||
+
+                PostProcessorRegistrationDelegate -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n更新容器内 Bean 的定义（增加、删除、修改）
+                activate BeanFactoryPostProcessor
+
+                |||
+
+                PostProcessorRegistrationDelegate <- BeanFactoryPostProcessor
+                deactivate BeanFactoryPostProcessor
+
+                |||
+
+            end
+
+            |||
+
+            loop #D5E8D4 **遍历所有在 refresh 之前添加的 ""BeanFactoryPostProcessor"" 实例**
+
+                |||
+
+                PostProcessorRegistrationDelegate -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n更新容器内 Bean 的定义（增加、删除、修改）
+                activate BeanFactoryPostProcessor
+
+                |||
+
+                PostProcessorRegistrationDelegate <- BeanFactoryPostProcessor
+                deactivate BeanFactoryPostProcessor
+
+                |||
+
+            end
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序 ""BeanFactoryPostProcessor"" 实现类
+            activate PostProcessorRegistrationDelegate #FF33FF
+            |||
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            loop #F8CECC **遍历所有实现了 ""PriorityOrdered"" 的 ""BeanFactoryPostProcessor"" 实例**
+
+                |||
+
+                PostProcessorRegistrationDelegate -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n更新容器内 Bean 的定义（增加、删除、修改）
+                note over PostProcessorRegistrationDelegate,BeanFactoryPostProcessor: 实现 ""PriorityOrdered"" 接口的 ""BeanFactoryPostProcessor"" 实例
+                activate BeanFactoryPostProcessor
+                PostProcessorRegistrationDelegate <- BeanFactoryPostProcessor
+                deactivate BeanFactoryPostProcessor
+
+                |||
+
+            end
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序 ""BeanFactoryPostProcessor"" 实现类
+            activate PostProcessorRegistrationDelegate #FF33FF
+            |||
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            loop #FFF2CC **遍历所有实现了 ""Ordered"" 的 ""BeanFactoryPostProcessor"" 实例**
+
+                |||
+
+                PostProcessorRegistrationDelegate -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n更新容器内 Bean 的定义（增加、删除、修改）
+                note over PostProcessorRegistrationDelegate,BeanFactoryPostProcessor: 实现 ""Ordered"" 接口的 ""BeanFactoryPostProcessor"" 实例
+                activate BeanFactoryPostProcessor
+                PostProcessorRegistrationDelegate <- BeanFactoryPostProcessor
+                deactivate BeanFactoryPostProcessor
+
+                |||
+
+            end
+
+            |||
+
+            loop #DDFFFF **遍历剩余所有的 ""BeanFactoryPostProcessor"" 实例**
+
+                |||
+
+                PostProcessorRegistrationDelegate -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n更新容器内 Bean 的定义（增加、删除、修改）
+                note over PostProcessorRegistrationDelegate,BeanFactoryPostProcessor: 剩余所有的 ""BeanFactoryPostProcessor"" 实例
+                activate BeanFactoryPostProcessor
+                PostProcessorRegistrationDelegate <- BeanFactoryPostProcessor
+                deactivate BeanFactoryPostProcessor
+
+                |||
+
+            end
+
+            |||
+
+        AbstractApplicationContext <- PostProcessorRegistrationDelegate
+        deactivate PostProcessorRegistrationDelegate
+    AbstractApplicationContext -> AbstractApplicationContext
+    deactivate AbstractApplicationContext
+
+    |||
+
+Actor <- AbstractApplicationContext: 完成容器初始化
+deactivate AbstractApplicationContext
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

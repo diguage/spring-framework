@@ -1,0 +1,14 @@
+= `FactoryBean` 详解
+
+[#FactoryBeanTest]
+.FactoryBeanTest
+[{java_src_attr}]
+----
+include::{truman_src_dir}/beans/FactoryBeanTest.java[]
+----
+<1> 获取 `FactoryBean` 的实现类的实例。
+<2> 获取 `FactoryBean` 的 `getObject()` 方法创建的实例。
+
+由 `FactoryBean` 实现类创建的 Bean 实例，在实际 `getBean` 之前，不会创建。 会根据 `isSingleton()` 方法的返回值来决定创建之后是否缓存实例。
+
+`FactoryBean` 实现类创建的 Bean 实例并不是存储在 `singletonObjects` 实例变量中（由 `DefaultSingletonBeanRegistry` 声明， `AbstractBeanFactory` 间接继承了 `DefaultSingletonBeanRegistry`），而是保存在 `factoryBeanObjectCache` 实例变量中（由 `FactoryBeanRegistrySupport` 声明， `AbstractBeanFactory` 直接继承了 `FactoryBeanRegistrySupport`）。具体情况，请参考类图： <<uml-BeanFactory, BeanFactory 继承体系及关键属性>>。
