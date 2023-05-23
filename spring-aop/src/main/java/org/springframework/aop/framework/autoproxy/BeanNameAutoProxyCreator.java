@@ -28,6 +28,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.PatternMatchUtils;
 
 /**
+ * 通过指定一组容器内的目标对象对应的 beanName，将指定的一组拦截器应用到这些目标对象之上。
+ *
  * Auto proxy creator that identifies beans to proxy via a list of names.
  * Checks for direct, "xxx*", and "*xxx" matches.
  *

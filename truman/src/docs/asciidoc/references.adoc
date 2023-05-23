@@ -1,0 +1,43 @@
+[appendix]
+= 参考资料
+
+[[tips-refer]]
+== Spring
+
+. https://blog.csdn.net/chjttony/article/details/6286144[Spring基于 Annotation 的简单介绍 - Tony Chen的专栏 - 博客频道 - CSDN.NET]
+. https://stackoverflow.com/questions/11324372/how-to-make-spring-inject-value-into-a-static-field/11324464#11324464[java - How to make spring inject value into a static field - Stack Overflow]
+. https://stackoverflow.com/questions/6990767/inject-bean-reference-into-a-quartz-job-in-spring[inject bean reference into a Quartz job in Spring? - Stack Overflow]
+. https://fanshuyao.iteye.com/blog/2309702[Spring+quartz集群配置，Spring定时任务集群，quartz定时任务集群 - 蕃薯耀 - ITeye技术网站]
+. https://fanshuyao.iteye.com/blog/2309223[Spring定时任务，Spring4整合quartz2.2，quartz-scheduler定时任务 - 蕃薯耀 - ITeye技术网站]
+
+
+[[uml-refer]]
+== UML
+
+. https://my.oschina.net/u/735642/blog/647205[Java异常的统一返回处理 - 边号007的个人空间 - 开源中国社区]
+. https://my.oschina.net/kaywu123/blog/614325?fromerr=3jGbYlhw[Spring 源码分析(二) —— 核心容器 - 水门-kay的个人页面 - 开源中国社区]
+. https://www.cnblogs.com/ywqu/archive/2009/12/22/1629426.html[UML建模之时序图（Sequence Diagram） - 灵动生活 - 博客园]
+. https://blog.51cto.com/smartlife/284874[UML建模之时序图（Sequence Diagram） - 灵动生活 - 51CTO技术博客]
+. https://blog.csdn.net/shulianghan/article/details/17927131[【UML 建模】UML入门 之 交互图 -- 时序图 协作图详解 - 让 学习 成为一种 习惯 ( 韩曙亮 の 技术博客 ) - 博客频道 - CSDN.NET]
+. http://www.uml.org.cn/oobject/201009081.asp[UML建模之时序图（Sequence Diagram）]
+. https://www.sparxsystems.cn/resources/uml2_tutorial/uml2_sequencediagram.html[Sparx Systems - UML 2 教程 - 顺序图]
+. https://msdn.microsoft.com/zh-cn/library/dd409377.aspx[UML 序列图：参考]
+. https://www.ibm.com/developerworks/cn/rational/rationaledge/content/feb05/bell/3101.html[UML 基础: 序列图]
+. https://conglang.github.io/2015/02/04/uml_class_sequence/[UML类图与序列图 ]
+. https://conglang.github.io/img/class_diagram_class.jpg[class_diagram_class.jpg (563×138)]
+. https://www.cnblogs.com/duanxz/archive/2012/06/13/2547801.html[UML类图符号 各种关系说明以及举例 - duanxz - 博客园]
+. https://www.cnblogs.com/olvo/archive/2012/05/03/2481014.html[UML类图关系（泛化 、继承、实现、依赖、关联、聚合、组合） - 明明的天天 - 博客园]
+. https://www.ibm.com/developerworks/cn/rational/rationaledge/content/feb05/bell/[UML 基础: 类图]
+. http://www.uml.org.cn/oobject/201211231.asp[深入浅出UML类图]
+
+[[environment-refer]]
+== 环境配置
+
+* https://stackoverflow.com/questions/34332580/run-gradle-test-and-not-junit-test-in-intellij-idea-15-when-choosing-configurati[Run Gradle test and not Junit test in IntelliJ IDEA 15 when choosing configuration type to run with]
+
+[[xml-refer]]
+== XML
+
+. https://www.w3school.com.cn/xml/index.asp[XML 教程]
+. https://www.w3school.com.cn/dtd/index.asp[DTD 教程]
+. https://www.w3school.com.cn/schema/index.asp[Schema 教程]

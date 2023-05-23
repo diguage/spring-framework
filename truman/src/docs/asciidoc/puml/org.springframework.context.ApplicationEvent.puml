@@ -1,0 +1,80 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **""ApplicationEvent"" 继承体系**
+
+class EventObject implements java.io.Serializable {
+  # Object source
+  + Object getSource()
+}
+
+abstract class ApplicationEvent extends EventObject {
+  - long timestamp
+  + long getTimestamp()
+}
+
+abstract class ApplicationContextEvent extends ApplicationEvent
+
+class ContextStartedEvent extends ApplicationContextEvent
+
+class ContextRefreshedEvent extends ApplicationContextEvent
+
+class ContextStoppedEvent extends ApplicationContextEvent
+
+class ContextClosedEvent extends ApplicationContextEvent
+
+interface ResolvableTypeProvider {
+  + ResolvableType getResolvableType()
+}
+
+class PayloadApplicationEvent<T> extends ApplicationEvent implements ResolvableTypeProvider {
+  - T payload
+  - ResolvableType payloadType
+  + ResolvableType getResolvableType()
+  + T getPayload()
+}
+
+class RequestHandledEvent extends ApplicationEvent {
+  - String sessionId
+  - String userName
+  - long processingTimeMillis
+  - Throwable failureCause
+  + long getProcessingTimeMillis()
+  + String getSessionId()
+  + String getUserName()
+  + boolean wasFailure()
+  + Throwable getFailureCause()
+}
+
+class ServletRequestHandledEvent extends RequestHandledEvent {
+  - String requestUrl
+  - String clientAddress
+  - String method
+  - String servletName
+  - int statusCode
+  + String getRequestUrl()
+  + String getClientAddress()
+  + String getMethod()
+  + String getServletName()
+  + int getStatusCode()
+}
+
+abstract class AbstractSubProtocolEvent extends ApplicationEvent {
+  - Message<byte[]> message
+  - Principal user
+  + Message<byte[]> getMessage()
+  + Principal getUser()
+}
+
+class SessionConnectedEvent extends AbstractSubProtocolEvent
+class SessionConnectEvent extends AbstractSubProtocolEvent
+class SessionDisconnectEvent extends AbstractSubProtocolEvent
+class SessionSubscribeEvent extends AbstractSubProtocolEvent
+class SessionUnsubscribeEvent extends AbstractSubProtocolEvent
+
+class EmailReceivedEvent extends ApplicationEvent
+
+class BrokerAvailabilityEvent extends ApplicationEvent
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

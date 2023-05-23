@@ -63,21 +63,24 @@ final class PlaceholderParser {
 
 	private static final Log logger = LogFactory.getLog(PlaceholderParser.class);
 
+	// 维护了一组简单的前后缀组合
 	private static final Map<String, String> wellKnownSimplePrefixes = Map.of(
 			"}", "{",
 			"]", "[",
 			")", "("
 		);
 
-
+	// 占位符前缀
 	private final String prefix;
-
+	// 占位符后缀
 	private final String suffix;
 
 	private final String simplePrefix;
 
+	// 默认值分割符，譬如当其值为 : 时，对应 ${a:b} 意味着当 a 解析失败时取默认值 b
 	private final @Nullable String separator;
 
+	// 解析失败时是否忽略
 	private final boolean ignoreUnresolvablePlaceholders;
 
 	private final @Nullable Character escape;

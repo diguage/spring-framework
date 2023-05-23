@@ -63,16 +63,20 @@ public abstract class NamespaceHandlerSupport implements NamespaceHandler {
 	private final Map<String, BeanDefinitionDecorator> attributeDecorators = new HashMap<>();
 
 
+  // tag::parse[]
 	/**
 	 * Parses the supplied {@link Element} by delegating to the {@link BeanDefinitionParser} that is
 	 * registered for that {@link Element}.
 	 */
 	@Override
 	public @Nullable BeanDefinition parse(Element element, ParserContext parserContext) {
+		// 获取元素解析器
 		BeanDefinitionParser parser = findParserForElement(element, parserContext);
 		return (parser != null ? parser.parse(element, parserContext) : null);
 	}
+  // end::parse[]
 
+  // tag::findParserForElement[]
 	/**
 	 * Locates the {@link BeanDefinitionParser} from the register implementations using
 	 * the local name of the supplied {@link Element}.
@@ -86,6 +90,7 @@ public abstract class NamespaceHandlerSupport implements NamespaceHandler {
 		}
 		return parser;
 	}
+  // end::findParserForElement[]
 
 	/**
 	 * Decorates the supplied {@link Node} by delegating to the {@link BeanDefinitionDecorator} that

@@ -1,0 +1,26 @@
+[#inject-static-field]
+= 注入静态属性
+
+[source,xml,{source_attr}]
+----
+<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+    <property name="staticMethod" value="com.diguage.web.util.SessionUtil.setLocationService"/>
+    <property name="arguments">
+        <list>
+            <ref bean="locationService"/>
+        </list>
+    </property>
+</bean>
+----
+
+[source,java,{source_attr}]
+----
+public class SessionUtil {
+
+  private static LocationService locationService;
+
+  public static void setLocationService(LocationService ls) {
+    locationService = ls;
+  }
+}
+----

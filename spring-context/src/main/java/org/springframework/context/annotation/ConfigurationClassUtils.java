@@ -115,11 +115,16 @@ public abstract class ConfigurationClassUtils {
 		if (beanDef instanceof AnnotatedBeanDefinition annotatedBd &&
 				className.equals(annotatedBd.getMetadata().getClassName())) {
 			// Can reuse the pre-parsed metadata from the given BeanDefinition...
+			// 如果 BeanDefinition 是 AnnotatedBeanDefinition 的实例，并且
+			// className 和 BeanDefinition 中的元数据的类名相同
+			// 则直接从 BeanDefinition 获取 metadata
 			metadata = annotatedBd.getMetadata();
 		}
 		else if (beanDef instanceof AbstractBeanDefinition abstractBd && abstractBd.hasBeanClass()) {
 			// Check already loaded Class if present...
 			// since we possibly can't even load the class file for this Class.
+			// 如果 BeanDefinition 是 AbstractBeanDefinition 的实例，并且 beanDef 有 BeanClass 属性存在，
+			// 则实例化 StandardAnnotationMetadata
 			Class<?> beanClass = abstractBd.getBeanClass();
 			if (BeanFactoryPostProcessor.class.isAssignableFrom(beanClass) ||
 					BeanPostProcessor.class.isAssignableFrom(beanClass) ||
@@ -127,6 +132,7 @@ public abstract class ConfigurationClassUtils {
 					EventListenerFactory.class.isAssignableFrom(beanClass)) {
 				return false;
 			}
+			// 这方法调用里实例化了 StandardAnnotationMetadata
 			metadata = AnnotationMetadata.introspect(beanClass);
 		}
 		else {
@@ -142,7 +148,7 @@ public abstract class ConfigurationClassUtils {
 				return false;
 			}
 		}
-
+        // TODO 对 @Configuration 注解标注的类，有什么特殊处理？
 		Map<String, @Nullable Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);

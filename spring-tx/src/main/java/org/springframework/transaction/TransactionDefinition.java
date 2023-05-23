@@ -43,6 +43,7 @@ import org.jspecify.annotations.Nullable;
  */
 public interface TransactionDefinition {
 
+	// 事务的7个传播行为
 	/**
 	 * Support a current transaction; create a new one if none exists.
 	 * Analogous to the EJB transaction attribute of the same name.
@@ -108,6 +109,7 @@ public interface TransactionDefinition {
 	 * will be suspended and resumed appropriately.
 	 * @see org.springframework.transaction.jta.JtaTransactionManager#setTransactionManager
 	 */
+	// TODO 如何挂起事务？
 	int PROPAGATION_NOT_SUPPORTED = 4;
 
 	/**
@@ -132,6 +134,7 @@ public interface TransactionDefinition {
 	int PROPAGATION_NESTED = 6;
 
 
+	// 事务的5个隔离级别
 	/**
 	 * Use the default isolation level of the underlying datastore.
 	 * <p>All other levels correspond to the JDBC isolation levels.

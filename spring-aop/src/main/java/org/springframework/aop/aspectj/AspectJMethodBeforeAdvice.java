@@ -39,7 +39,7 @@ public class AspectJMethodBeforeAdvice extends AbstractAspectJAdvice implements 
 		super(aspectJBeforeAdviceMethod, pointcut, aif);
 	}
 
-
+	// 前置通知
 	@Override
 	public void before(Method method, @Nullable Object[] args, @Nullable Object target) throws Throwable {
 		invokeAdviceMethod(getJoinPointMatch(), null, null);

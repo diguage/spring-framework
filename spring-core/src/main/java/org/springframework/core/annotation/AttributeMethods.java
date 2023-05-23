@@ -137,6 +137,7 @@ final class AttributeMethods {
 		for (int i = 0; i < size(); i++) {
 			if (canThrowTypeNotPresentException(i)) {
 				try {
+                    // TODO 方法一下有什么意义？
 					AnnotationUtils.invokeAnnotationMethod(get(i), annotation);
 				}
 				catch (IllegalStateException ex) {

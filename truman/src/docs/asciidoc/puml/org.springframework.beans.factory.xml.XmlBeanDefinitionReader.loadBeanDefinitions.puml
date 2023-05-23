@@ -1,0 +1,58 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **XmlBeanDefinitionReader.loadBeanDefinitions(Resource) 函数执行时序图**
+
+
+'autonumber
+skinparam sequenceMessageAlign direction
+
+participant XmlBeanFactory << (C,#ADD1B2) >>
+participant XmlBeanDefinitionReader << (C,#ADD1B2) >>
+participant EncodedResource << (C,#ADD1B2) >>
+participant Resource << (I,#AB9DE1) >>
+participant InputSource << (C,#ADD1B2) >> <<XML>>
+
+
+XmlBeanFactory -> XmlBeanDefinitionReader : loadBeanDefinition(resource)
+activate XmlBeanDefinitionReader
+
+    XmlBeanDefinitionReader -> EncodedResource : new EncodedResource(resource)
+    activate EncodedResource
+    XmlBeanDefinitionReader <- EncodedResource : EncodedResource:EncodedResource
+    deactivate EncodedResource
+
+    XmlBeanDefinitionReader -> XmlBeanDefinitionReader : loadBeanDefinitions(EncodedResource)
+    activate XmlBeanDefinitionReader
+
+        XmlBeanDefinitionReader -> EncodedResource : getResource()
+        activate EncodedResource
+        XmlBeanDefinitionReader <-- EncodedResource : resource:Resource
+        deactivate EncodedResource
+
+        XmlBeanDefinitionReader -> Resource : getInputStream()
+        activate Resource
+        XmlBeanDefinitionReader <- Resource : inputStream:InputStream
+        deactivate Resource
+
+        XmlBeanDefinitionReader -> InputSource : new InputSource(inputStream)
+        activate InputSource
+        XmlBeanDefinitionReader <- InputSource : inputSource:InputSource
+        deactivate InputSource
+
+        XmlBeanDefinitionReader -> XmlBeanDefinitionReader : doLoadBeanDefinitions(inputSource, EncodedResource.getResource())
+        activate XmlBeanDefinitionReader
+        XmlBeanDefinitionReader --> XmlBeanDefinitionReader : loadedBeanDefinitionNum:int
+        deactivate XmlBeanDefinitionReader
+
+    XmlBeanDefinitionReader -> XmlBeanDefinitionReader
+    deactivate XmlBeanDefinitionReader
+
+    |||
+
+XmlBeanFactory <- XmlBeanDefinitionReader : loadedBeanDefinitionNum:int
+deactivate XmlBeanDefinitionReader
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

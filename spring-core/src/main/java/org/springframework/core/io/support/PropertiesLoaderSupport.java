@@ -146,6 +146,7 @@ public abstract class PropertiesLoaderSupport {
 
 		if (this.localOverride) {
 			// Load properties from file upfront, to let local properties override.
+			// 将 location 中配置的配置文件内容，加载到 result 里
 			loadProperties(result);
 		}
 
@@ -157,6 +158,7 @@ public abstract class PropertiesLoaderSupport {
 
 		if (!this.localOverride) {
 			// Load properties from file afterwards, to let those properties override.
+			// 将 location 中配置的配置文件内容，加载到 result 里
 			loadProperties(result);
 		}
 

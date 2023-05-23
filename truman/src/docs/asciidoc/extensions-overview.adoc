@@ -1,0 +1,578 @@
+= 扩展点概览及实践
+
+学习 Spring 代码，最重要的是掌握 Spring 有哪些扩展点，可以利用这些扩展点对 Spring 做什么扩展操作。说得更具体一点，如果自己开发一个框架，如何与 Spring 进行整合，如果对 Spring 的扩展点有一个比较清晰的认识，势必会事半功倍。
+
+== `@Import`
+
+先来看一下 `@Import` 注解的定义：
+
+[{java_src_attr}]
+----
+include::{context_src_dir}/context/annotation/Import.java[]
+----
+
+从声明可以看出，使用时，只需要指定 `Class` 实例即可；从方法的文档中可以看出，`Class` 实例可以分为三种：`ImportSelector`、`ImportBeanDefinitionRegistrar` 和常规组件类。示例如下：
+
+[{java_src_attr}]
+----
+@Configuration
+@Import(LogImportSelector.class)
+public static class Config {
+}
+----
+
+在 `org.springframework.context.annotation.ConfigurationClassParser#processImports` 方法中，集中了对 `@Import` 注解的处理。从代码可以非常清晰地看出，分了三种情况进行处理：
+
+. `ImportSelector`
+. `ImportBeanDefinitionRegistrar`
+. 常规组件 `Class`
+
+下面分别对其进行介绍。
+
+=== `ImportSelector`
+
+先来看一下 `ImportSelector` 接口的定义：
+
+[{java_src_attr}]
+----
+include::{context_src_dir}/context/annotation/ImportSelector.java[]
+----
+
+从接口文档中就可以看出，使用 `String[] selectImports(AnnotationMetadata importingClassMetadata)` 方法，返回所需要引入的类全限定名即可。实例如下：
+
+[{java_src_attr}]
+----
+public class LogImportSelector implements ImportSelector {
+  @Override
+  public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+    return new String[]{
+        UserDao.class.getName(),
+        UserService.class.getName(),
+        ProtoService.class.getName()
+    };
+  }
+}
+----
+
+=== `ImportBeanDefinitionRegistrar`
+
+先来看一下 `ImportBeanDefinitionRegistrar` 接口的定义：
+
+[{java_src_attr}]
+----
+include::{context_src_dir}/context/annotation/ImportBeanDefinitionRegistrar.java[]
+----
+
+这里使用到了 `BeanDefinitionRegistry` 接口，来看一下这个接口的定义：
+
+[{java_src_attr}]
+----
+include::{beans_src_dir}/factory/support/BeanDefinitionRegistry.java[]
+----
+
+很明显，可以通过 `registerBeanDefinition(String beanName, BeanDefinition beanDefinition)` 方法，向容器在中注入所需要的 `BeanDefinition`，而 `BeanDefinition` 是常见的 Bean 实例的基石。示例如下：
+
+[{java_src_attr}]
+----
+public class LogImportBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar {
+  @Override
+  public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata,
+                    BeanDefinitionRegistry registry) {
+    RootBeanDefinition definition = new RootBeanDefinition(UserService.class);
+    registry.registerBeanDefinition(UserService.class.getName(), definition);
+  }
+}
+----
+
+=== 常规组件 `Class`
+
+这是最简单的情况，直接举例：
+
+[{java_src_attr}]
+----
+@Configuration
+@Import(UserService.class)
+public static class Config {
+}
+----
+
+[#bean-definition-registry-post-processor]
+== `BeanDefinitionRegistryPostProcessor`
+
+先来看一下 `BeanDefinitionRegistryPostProcessor` 的定义：
+
+[{java_src_attr}]
+----
+include::{beans_src_dir}/factory/support/BeanDefinitionRegistryPostProcessor.java[]
+----
+
+这个接口扩展了标准的 `BeanFactoryPostProcessor` 接口，允许在普通的 `BeanFactoryPostProcessor` 接口实现类执行之前注册更多的 `BeanDefinition`。特别地是，`BeanDefinitionRegistryPostProcessor` 可以注册 `BeanFactoryPostProcessor` 的 `BeanDefinition`。
+
+`postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry)` 方法可以修改在 `BeanDefinitionRegistry` 接口实现类中注册的任意 `BeanDefinition`，也可以增加和删除 `BeanDefinition`。原因是这个方法执行前,所有常规的 `BeanDefinition` 已经被加载到 `BeanDefinitionRegistry` 接口实现类中，但还没有bean被实例化。
+
+实例如下：
+
+[{java_src_attr}]
+----
+public class LogBeanDefinitionRegistryPostProcessor implements BeanDefinitionRegistryPostProcessor {
+  @Override
+  public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+    System.out.println(getAndIncrement()
+        + "LogBeanDefinitionRegistryPostProcessor.postProcessBeanDefinitionRegistry\n");
+    RootBeanDefinition beanDefinition = new RootBeanDefinition(LogBeanFactoryPostProcessor.class);
+    registry.registerBeanDefinition(beanDefinition.getBeanClassName(), beanDefinition);
+  }
+
+  @Override
+  public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+    System.out.println(getAndIncrement()
+        + "LogBeanDefinitionRegistryPostProcessor.postProcessBeanFactory\n");
+  }
+}
+----
+
+`BeanDefinitionRegistryPostProcessor` 在 Spring 内部的使用，最重要的示例就是 `ConfigurationClassPostProcessor`，这个类负责解析 `@Import` 和 `@Configuration` 等注解。感兴趣可以认真研究一下这个类的代码。
+
+
+[#bean-factory-post-processor]
+== `BeanFactoryPostProcessor`
+
+`BeanFactory` 生成后，如果想对 `BeanFactory` 进行一些处理，该怎么办呢？`BeanFactoryPostProcessor` 接口就是用来处理 `BeanFactory` 的。
+
+先来看一下接口定义：
+
+[{java_src_attr}]
+----
+include::{beans_src_dir}/factory/config/BeanFactoryPostProcessor.java[]
+----
+
+若 IoC 容器内添加了实现了 `BeanFactoryPostProcessor` 接口的实现类 Bean，那么在该容器中实例化任何其他 Bean 之前可以回调该 Bean 中的 `postPrcessorBeanFactory()` 方法来对 Bean 的配置元数据进行更改，比如设置 `init-method`，或者将 `Scope` 从 `SINGLETON` 改为 `PROTOTYPE`。示例如下：
+
+[{java_src_attr}]
+----
+public class LogBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
+  @Override
+  public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+    System.out.println(getAndIncrement()
+        + "LogBeanFactoryPostProcessor.postProcessBeanFactory\n");
+    System.out.println(Arrays.toString(beanFactory.getBeanDefinitionNames()).replaceAll(",", ",\n"));
+    BeanDefinition definition = beanFactory.getBeanDefinition(UserService.class.getName());
+    // 设置 init 方法
+    definition.setInitMethodName("init");
+  }
+}
+----
+
+在代码 `org.springframework.context.support.AbstractApplicationContext#invokeBeanFactoryPostProcessors` 中，集中了对 `BeanFactoryPostProcessor` 的调用。该方法把处理过程，委托给了 `org.springframework.context.support.PostProcessorRegistrationDelegate#invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory, java.util.List<BeanFactoryPostProcessor>)` 方法来处理。根据代码可以整理出处理流程如下：
+
+. 如果 `beanFactory` 是一个 `BeanDefinitionRegistry` 实例，则：
+.. 首先处理参数传过来的 `List<BeanFactoryPostProcessor> beanFactoryPostProcessors` 对象
+... 如果 `postProcessor` 是 `BeanDefinitionRegistryPostProcessor` 实现类，则直接调用 `postProcessBeanDefinitionRegistry`，然后加入到 `List<BeanDefinitionRegistryPostProcessor> registryProcessors` 列表中；
+... 如果不是，则加入到 `List<BeanFactoryPostProcessor> regularPostProcessors` 列表中；
+.. 从 `BeanFactory` 中通过 `beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false)` 方法获取 `BeanDefinitionRegistryPostProcessor` 名称列表。筛选出实现了 `PriorityOrdered` 接口的实例，然后排序再逐一调用 `postProcessBeanDefinitionRegistry` 方法。最后，加入到 `List<BeanDefinitionRegistryPostProcessor> registryProcessors` 列表中。
+.. 从 `BeanFactory` 中通过 `beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false)` 方法获取 `BeanDefinitionRegistryPostProcessor` 名称列表。筛选出实现了 `Ordered` 接口的实例，然后排序再逐一调用 `postProcessBeanDefinitionRegistry` 方法。最后，加入到 `List<BeanDefinitionRegistryPostProcessor> registryProcessors` 列表中。(注意：上一步已经调用过的则不再重复调用。)
+.. 从 `BeanFactory` 中通过 `beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false)` 方法获取 `BeanDefinitionRegistryPostProcessor` 名称列表。剔除掉前两步调用过的类，排序再逐一调用 `postProcessBeanDefinitionRegistry` 方法。最后，加入到 `List<BeanDefinitionRegistryPostProcessor> registryProcessors` 列表中。要强调的一点是：这里是通过一个循环来反复执行这一步，D瓜哥认为是在调用 `postProcessBeanDefinitionRegistry` 方法中，有会参数新注册的 `BeanDefinitionRegistryPostProcessor`，所以需要反复调用。大家如果有不同见解，也欢迎留言讨论。
+.. 调用 `BeanDefinitionRegistryPostProcessor` 对象的 `postProcessBeanFactory` 方法；
+.. 调用 `BeanFactoryPostProcessor` 对象的 `postProcessBeanFactory` 方法；
+. 如果 `beanFactory` 不是 `BeanDefinitionRegistry` 实例，则直接调用 `BeanFactoryPostProcessor` 对象的 `postProcessBeanFactory` 方法；
+. 从 `BeanFactory` 中通过 `beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false)` 方法获取 `BeanFactoryPostProcessor` 名称列表。将其分为：
+.. 实现 `PriorityOrdered` 接口的实例
+.. 实现 `Ordered` 接口的实例
+.. 未排序的实例
++
+按照这个顺序，排除已经处理过的实例，再分类，然后排序再跟着这个顺序依次逐一调用 `BeanFactoryPostProcessor` 对象的 `postProcessBeanFactory` 方法；
++
+. 最后，向 `BeanFactory` 注册 `ApplicationListenerDetector` 实例。
+
+
+== `InstantiationAwareBeanPostProcessor`
+
+注意区分 *`Instantiation`* 和 *`Initialization`*。
+
+* *`Instantiation`* -- 实例化，在实例化之前还没有生成对象。
+* *`Initialization`* -- 初始化，对象已经生成，需要对其做进一步的处理，比如赋值等。
+
+[#factory-bean]
+== `FactoryBean`
+
+在对象生成上，有时也许需要做些特殊处理。比如，创建对象过程比较繁琐，希望可以通过实现 `FactoryBean` 来封装初始化过程。
+
+在 Spring 官方文档 https://docs.spring.io/spring/docs/current/spring-framework-reference/core.html#beans-factory-extension-factorybean[Core Technologies: Customizing Instantiation Logic with a `FactoryBean`^] 也有进一步的说明。
+
+目前，Spring 源码中，`FactoryBean` 的实现类就有五十多个，随便举几个栗子🌰：
+
+* `org.springframework.http.converter.json.GsonFactoryBean`
+* `org.springframework.cache.jcache.JCacheManagerFactoryBean`
+* `org.springframework.aop.framework.ProxyFactoryBean`
+
+示例如下：
+
+[{java_src_attr}]
+----
+package com.diguage.truman.context;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.FactoryBean;
+import org.springframework.context.annotation.*;
+
+import java.util.Arrays;
+
+/**
+ * FactoryBean 测试
+ *
+ * @author D瓜哥 · https://www.diguage.com
+ * @since 2020-05-26 16:34
+ */
+public class FactoryBeanTest {
+  @Test
+  public void test() {
+    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+    context.register(Config.class);
+    context.refresh();
+
+    UserService userService = context.getBean(UserService.class);
+    System.out.println(userService.getById(119L));
+
+    System.out.println("-↓----");
+    System.out.println("&userServiceFactoryBean = " // <1>
+        + context.getBean("&userServiceFactoryBean"));
+    System.out.println(" userServiceFactoryBean = " // <2>
+        + context.getBean("userServiceFactoryBean"));
+    System.out.println("-↑----");
+
+    UserServiceFactoryBean factoryBean = context.getBean(UserServiceFactoryBean.class);
+    System.out.println(factoryBean);
+    System.out.println(Arrays.toString(context.getBeanDefinitionNames())
+        .replaceAll(",", ",\n"));
+  }
+
+  @Configuration
+  public static class Config {
+    @Bean
+    public UserServiceFactoryBean userServiceFactoryBean() {
+      return new UserServiceFactoryBean();
+    }
+  }
+
+
+  public static class UserService {
+    public String getById(Long id) {
+      return "Name-" + id;
+    }
+  }
+
+  public static class UserServiceFactoryBean implements FactoryBean<UserService> {
+    @Override
+    public UserService getObject() throws Exception {
+      return new UserService();
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+      return UserService.class;
+    }
+
+    @Override
+    public boolean isSingleton() {
+      return false;
+    }
+  }
+}
+----
+<1> 通过 Bean 名称 `&userServiceFactoryBean` 获得的 Bean 是 `UserServiceFactoryBean` 对象；
+<2> 通过 Bean 名称 `userServiceFactoryBean` 获得的 Bean 是 `UserService` 对象；
+
+有一点需要强调一下：`&` 符号的使用需要注意。上面的代码和相应注释给出了说明。
+
+
+== `ObjectFactory`
+
+D瓜哥个人认为 `FactoryBean` 和 `ObjectFactory` 功能有些重叠，都是为了创建对象而设计的。
+
+通过 `ObjectFactory` 的文档，Spring 给出了官方解释：
+
+****
+这个接口通常用于封装一个通用的工厂，它在每次调用时返回某个目标对象的新实例（原型）。
+
+这个接口类似于 `FactoryBean`，但后者的实现通常是作为 `BeanFactory` 中的 SPI 实例来定义，而这个类的实现通常是作为 API 馈送给其他 Bean（通过注入）。因此，getObject()方法有不同的异常处理行为。
+****
+
+Spring 在解决循环依赖时和在创建 Bean 时，都使用到接口。它似乎可以脱离 Spring 单独使用。
+
+== `ObjectProvider`
+
+`ObjectProvider` 继承了 `ObjectFactory` 接口，它是后者的一个变体，提供了更加丰富的操作 `T getIfAvailable()`，T getIfUnique() 等。在 Spring 5.1 以后，有继承了 `Iterable<T>` 接口，方法用于循环或者 `forEach` 方法。在 `org.springframework.beans.factory.support.DefaultListableBeanFactory` 中有使用示例。
+
+== `BeanPostProcessor`
+
+`BeanPostProcessor` 是 Spring 中最最重要的扩展点。Spring 内部大量的功能 IoC 和 AOP 也都是通过 `BeanPostProcessor` 来实现的。先来看一下接口定义：
+
+[{java_src_attr}]
+----
+include::{beans_src_dir}/factory/config/BeanPostProcessor.java[]
+----
+
+具体到实际应用上，Spring 内置了大量的应用：
+
+. `ApplicationContextAwareProcessor` -- `Aware` 接口的处理。
+. `InitDestroyAnnotationBeanPostProcessor` -- `init-method` 和 `destroy-method` 方法的调用。
+. `InstantiationAwareBeanPostProcessor` 
+. `CommonAnnotationBeanPostProcessor` -- 常用注解 `@Resource`、`@PostConstruct` 和 `@PreDestroy` 的解析。
+. `AutowiredAnnotationBeanPostProcessor` -- 常用注解 `@Autowired`、`@Value` 和 `@Inject` 的解析。
+. `BeanValidationPostProcessor` -- 字段校验。
+. `AbstractAutoProxyCreator` -- 生成代理。
+
+少废话，直接上代码：
+
+[{java_src_attr}]
+----
+public class LogBeanPostProcessor implements BeanPostProcessor {
+  @Override
+  public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+    if (bean instanceof UserService) {
+      System.out.println(getAndIncrement()
+          + "LogBeanPostProcessor.postProcessBeforeInitialization");
+      System.out.println(bean);
+      System.out.println();
+    }
+    return bean;
+  }
+
+  @Override
+  public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+    if (bean instanceof UserService) {
+      System.out.println(getAndIncrement()
+          + "LogBeanPostProcessor.postProcessAfterInitialization");
+      System.out.println(bean);
+      System.out.println();
+    }
+    return bean;
+  }
+}
+
+// 将其注册到 BeanFactory 上
+beanFactory.addBeanPostProcessor(new LogBeanPostProcessor());
+----
+
+在 `org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#initializeBean(String, Object, RootBeanDefinition)` 方法中，通过 `applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName)` 和 `applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName)` 来分别调用 `postProcessBeforeInitialization` 和 `postProcessAfterInitialization` 方法。
+
+== 各种 Aware
+
+有时，自己开发的代码可能需要 `ApplicationContext` 或者 `BeanFactory` 等实例。则可以通过实现相应的 `Aware` 接口来获得对应的实例。目前有如下这些 `Aware` 接口：
+
+. `ApplicationContextAware`
+. `ApplicationEventPublisherAware`
+. `BeanClassLoaderAware`
+. `BeanFactoryAware`
+. `BeanNameAware`
+. `BootstrapContextAware`
+. `EmbeddedValueResolverAware`
+. `EnvironmentAware`
+. `ImportAware`
+. `LoadTimeWeaverAware`
+. `MessageSourceAware`
+. `NotificationPublisherAware`
+. `ResourceLoaderAware`
+. `SchedulerContextAware`
+. `ServletConfigAware`
+. `ServletContextAware`
+
+在代码 `org.springframework.context.support.ApplicationContextAwareProcessor#invokeAwareInterfaces` 中，集中处理了 `EnvironmentAware`、`EmbeddedValueResolverAware`、`ResourceLoaderAware`、`ApplicationEventPublisherAware`、`MessageSourceAware` 和 `ApplicationContextAware` 等六种 `Aware` 注入。值得一提的是，通过类的定义可以得知，`ApplicationContextAwareProcessor` 是一个 `BeanPostProcessor` 实现类，那么 `BeanPostProcessor` 的处理机制也通过适用于该类。
+
+=== `ApplicationContextAware`
+
+如果某个 Bean 实现了 `ApplicationContextAware` 接口，那么 Spring 将会将该 Bean 所在的上下文环境 `ApplicationContext` 传递给 `setApplicationContext()` 方法，在 Bean 类中新增一个 `ApplicationContext` 字段用来保存 `ApplicationContext` 的值，并实现 `setApplicationContext()` 方法。
+
+[{java_src_attr}]
+----
+@Service
+public static class UserService implements InitializingBean, ApplicationContextAware {
+  @Resource
+  UserDao userDao;
+
+  ApplicationContext applicationContext;
+
+  public UserService() {
+    System.out.println(getAndIncrement()
+        + "UserService()\n");
+  }
+
+  @Override
+  public void afterPropertiesSet() throws Exception {
+    System.out.println(getAndIncrement()
+        + "UserService.afterPropertiesSet\n");
+  }
+
+  public void init() {
+    System.out.println(getAndIncrement()
+        + "UserService.init\n");
+  }
+
+  String getById(Long id) {
+    return userDao.getById(id);
+  }
+
+  @Override
+  public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    System.out.println(getAndIncrement()
+        + "UserService.setApplicationContext\n");
+    this.applicationContext = applicationContext;
+  }
+}
+----
+
+=== `BeanClassLoaderAware`
+
+如果某个 Bean 实现了 `BeanClassLoaderAware` 接口，那么 Spring 将会将创建 Bean 的 `ClassLoader` 传递给 `setBeanClassLoader()` 方法，在 Bean 类中新增了一个 `classLoader` 字段用来保存 `ClassLoader` 的值，并实现 `setBeanClassLoader()` 方法。
+
+=== `BeanFactoryAware`
+
+如果某个 Bean 实现了 `BeanFactoryAware` 接口，那么 Spring 将会将创建 Bean 的 `BeanFactory` 传递给 `setBeanFactory()` 方法，在 Bean 类中新增了一个 `beanFactory` 字段用来保存 `BeanFactory` 的值，并实现 `setBeanFactory()` 方法。
+
+=== `BeanNameAware`
+
+如果某个 Bean 实现了 `BeanNameAware` 接口，那么 Spring 将会将 Bean 实例的ID传递给 `setBeanName()` 方法，在 Bean 类中新增一个 `beanName` 字段，并实现 `setBeanName()` 方法。
+
+=== `ServletContextAware`
+
+这个接口只能在 Web 项目中使用。
+
+如果某个 Bean 实现了 `ServletContextAware` 接口，那么 Spring 将会将 `ServletContext` 传递给 `setServletContext()` 方法，在 Bean 类中新增一个字段，并实现 `setServletContext()` 方法。
+
+[#InitializingBean-vs-init-method]
+== `InitializingBean` 与 `init-method`
+
+设置 `init-method` 方法和实现 `InitializingBean` 方法达到的效果是一样的。在代码 `org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#invokeInitMethods` 中可以看到很详细的处理流程：
+
+. 判断 Bean 是否是 `InitializingBean` 实例，如果是，则做类型转换，然后再调用其 `afterPropertiesSet()` 方法；
+. 获取 `AbstractBeanDefinition#initMethodName` 属性，然后判断是否合法（①长度大于零，②和第一步条件不重复，③不是外部管理的初始化方法），如果合法，则调用该方法。
+
+`init-method` 是通过反射执行的，而 `afterPropertiesSet()` 是直接执行的。所以 `afterPropertiesSet()` 的执行效率比 `init-method` 要高；不过 `init-method` 消除了 Bean 对 Spring 依赖。
+
+其实，按照一种方式设置即可。如果两者同时存在，则按照上述顺序执行。示例见上面的 `ApplicationContextAware` 示例。
+
+== `DestructionAwareBeanPostProcessor`
+
+能否在 Bean 销毁之前，对其做些操作呢？答案是可以的。
+
+`DestructionAwareBeanPostProcessor` 就可以实现这个功能。先来看一下接口定义：
+
+[{java_src_attr}]
+----
+include::{beans_src_dir}/factory/config/DestructionAwareBeanPostProcessor.java[]
+----
+
+由于 `DestructionAwareBeanPostProcessor` 是 `BeanPostProcessor` 子类，由此可见，可以像操作 `BeanPostProcessor` 一样来操作 `DestructionAwareBeanPostProcessor` 实现类。示例如下：
+
+
+[{java_src_attr}]
+----
+public class LogDestructionAwareBeanPostProcessor implements DestructionAwareBeanPostProcessor {
+  @Override
+  public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
+    System.out.println(getAndIncrement()
+        + "LogDestructionAwareBeanPostProcessor.postProcessBeforeDestruction");
+    System.out.println(bean.getClass().getName());
+  }
+}
+
+// 将其注册到 BeanFactory 上
+beanFactory.addBeanPostProcessor(new LogDestructionAwareBeanPostProcessor());
+----
+
+调用是在 `org.springframework.beans.factory.support.DisposableBeanAdapter#destroy` 方法中实现的。
+
+当调用 `beanFactory.destroyBean(bean)` 来手动销毁 Bean 时，就会创建 `DisposableBeanAdapter` 实例，然后调用 `destroy()` 来触发这个回调。也是在这个方法中，当调用完回调后，就会触发下面的 `DisposableBean` 回调。
+
+== `DisposableBean` 与 `destroy-method`
+
+想要触发生命周期函数的 `destroy()` 方法，必须要要手动调用 `beanFactory.destroyBean(bean)` 方法才行：
+
+[{java_src_attr}]
+----
+DggDisposableBean dggDisposableBean = applicationContext.getBean(DggDisposableBean.class);
+ConfigurableListableBeanFactory beanFactory = ApplicationContext.getBeanFactory();
+beanFactory.destroyBean(dggDisposableBean);
+----
+
+调用是在 `org.springframework.beans.factory.support.DisposableBeanAdapter#destroy` 方法中实现的。
+
+和 <<InitializingBean-vs-init-method>> 类似，`destroy-method` 也是在 `DisposableBean#destroy()` 之后执行的。如果同时存在，只要两者不重复，则两个同时都会执行。
+
+== `ApplicationListener`
+
+在 `org.springframework.context.support.AbstractApplicationContext#finishRefresh` 中，发布了 `ContextRefreshedEvent` 事件。
+
+// == `ReaderEventListener`
+
+== 整合实践
+
+上面介绍那么多，现在找一些实际项目对整合过程做个分析。先来个简单的。
+
+=== Hibernate 与 Spring 整合
+
+在 Spring 官网中，给出了非常详细的介绍： https://docs.spring.io/spring/docs/current/spring-framework-reference/data-access.html#orm-hibernate[Data Access: Hibernate^]
+
+Hibernate 与 Spring 整合主要涉及下面几个类：
+
+. `LocalSessionFactoryBean` -- 声明 Hibernate 配置信息；或者注入数据库连接池对象。
+. `HibernateTransactionManager` -- 负责处理 Hibernate 的事务。
+
+实例代码：
+
+[source,xml,{source_attr}]
+----
+<beans>
+  <bean id="myDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+    <property name="driverClassName" value="org.hsqldb.jdbcDriver"/>
+    <property name="url" value="jdbc:hsqldb:hsql://localhost:9001"/>
+    <property name="username" value="sa"/>
+    <property name="password" value=""/>
+  </bean>
+
+  <bean id="mySessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+    <property name="dataSource" ref="myDataSource"/>
+    <property name="mappingResources">
+      <list>
+        <value>product.hbm.xml</value>
+      </list>
+    </property>
+    <property name="hibernateProperties">
+      <value>
+        hibernate.dialect=org.hibernate.dialect.HSQLDialect
+      </value>
+    </property>
+  </bean>
+
+  <bean id="transactionManager"
+      class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+    <property name="sessionFactory" ref="sessionFactory"/>
+  </bean>
+
+  <tx:annotation-driven/>
+
+  <bean id="myProductDao" class="product.ProductDaoImpl">
+    <property name="sessionFactory" ref="mySessionFactory"/>
+  </bean>
+
+  <bean id="myProductService" class="product.SimpleProductService">
+    <property name="productDao" ref="myProductDao"/>
+  </bean>
+</beans>
+----
+
+Spring 与 Hibernate 的整合过程还是比较简单的，就是把 Hibernate 的相关对象当做普通的 Bean 注册到 Spring 容器中即可。
+
+另外，还有一种 `HibernateTemplate` 方式，和上面的方式类似，就不再赘述。
+
+原计划还准备添加 Spring 与 MyBATIS 和 Apache Dubbo 整合分析。考虑到本篇内容已经非常长，仔细分析它们的整合过程又需要大篇幅内容，所以，另外单独开文章进行说明。
+
+== 参考资料
+
+. https://www.jianshu.com/p/397c15cbf34a[Spring扩展点总结 - 简书^]
+. https://www.cnblogs.com/v1haoge/p/6106456.html[Spring中Bean的生命周期及其扩展点 - 唯一浩哥 - 博客园^]
+. https://leokongwq.github.io/2017/04/02/spring-expandPoint.html[spring扩展点整理 | 戒修-沉迷技术的小沙弥^]
+. https://juejin.im/post/5da995d25188256a49204d7b[spring源码系列7：Spring中的InstantiationAwareBeanPostProcessor和BeanPostProcessor的区别 - 掘金^]
+. https://juejin.im/post/5d31b1d2518825276a6f9c70[Dubbo源码之Spring整合 - 掘金^]
+. https://blog.csdn.net/canot/article/details/50512217[详细解释Spring与Hibernate的整合原理_java_不能说的秘密的博客-CSDN博客^]
+. https://blog.csdn.net/u012291108/article/details/51886269[bean的加载（九）记录创建bean的ObjectFactory_java_u012291108的博客-CSDN博客^]

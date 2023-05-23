@@ -74,6 +74,9 @@ public abstract class AopConfigUtils {
 	public static @Nullable BeanDefinition registerAutoProxyCreatorIfNecessary(
 			BeanDefinitionRegistry registry, @Nullable Object source) {
 
+		// 注册 InfrastructureAdvisorAutoProxyCreator，用于生成代理
+		// InfrastructureAdvisorAutoProxyCreator 是 AOP 的实现基础，
+		// 与 AOP 模块的 AutoProxyCreator 都继承至 AbstractAdvisorAutoProxyCreator 类
 		return registerOrEscalateApcAsRequired(InfrastructureAdvisorAutoProxyCreator.class, registry, source);
 	}
 
@@ -93,7 +96,7 @@ public abstract class AopConfigUtils {
 
 	public static @Nullable BeanDefinition registerAspectJAnnotationAutoProxyCreatorIfNecessary(
 			BeanDefinitionRegistry registry, @Nullable Object source) {
-
+		// 注册 AOP Bean
 		return registerOrEscalateApcAsRequired(AnnotationAwareAspectJAutoProxyCreator.class, registry, source);
 	}
 
@@ -120,16 +123,20 @@ public abstract class AopConfigUtils {
 			Class<?> cls, BeanDefinitionRegistry registry, @Nullable Object source) {
 
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
-
+		//如果已经存在了自动代理创建器且存在的自动代理创建器与现在的不一致那么需要根据优先级来判断到底需要使用哪个
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			BeanDefinition beanDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
 			if (!cls.getName().equals(beanDefinition.getBeanClassName())) {
+				// 根据类名怎么获取优先级？ TODO
 				int currentPriority = findPriorityForClass(beanDefinition.getBeanClassName());
+				// 内部默认注册了三个 ProxyGenerator，根据下标确认优先级，越小优先级越高
 				int requiredPriority = findPriorityForClass(cls);
 				if (currentPriority < requiredPriority) {
+					//改变bean最重要的就是改变bean所对应的className
 					beanDefinition.setBeanClassName(cls.getName());
 				}
 			}
+			//如果已经存在自动代理器并且与将要创建的一致，那么无需再此创建
 			return null;
 		}
 

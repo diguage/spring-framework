@@ -24,6 +24,9 @@ import org.springframework.aop.TargetSource;
 import org.springframework.util.Assert;
 
 /**
+ * 使用 `HotSwappableTargetSource` 封装目标对象，可以在应用程序运行时，根据
+ * 某种特定条件，动态地替换目标对象类的具体实现。
+ *
  * {@link org.springframework.aop.TargetSource} implementation that
  * caches a local target object, but allows the target to be swapped
  * while the application is running.

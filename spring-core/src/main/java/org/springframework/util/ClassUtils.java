@@ -929,6 +929,8 @@ public abstract class ClassUtils {
 	}
 
 	/**
+	 * 判断类是否是 Lambda 表达式。解决原来不能给 Lambda 表达式进行 AOP 增强的问题。
+	 *
 	 * Determine if the supplied {@link Class} is a JVM-generated implementation
 	 * class for a lambda expression or method reference.
 	 * <p>This method makes a best-effort attempt at determining this, based on

@@ -53,6 +53,7 @@ public class SpringTransactionAnnotationParser implements TransactionAnnotationP
 
 	@Override
 	public @Nullable TransactionAttribute parseTransactionAnnotation(AnnotatedElement element) {
+		// 解析事务注解的属性
 		AnnotationAttributes attributes = AnnotatedElementUtils.findMergedAnnotationAttributes(
 				element, Transactional.class, false, false);
 		if (attributes != null) {
@@ -70,31 +71,41 @@ public class SpringTransactionAnnotationParser implements TransactionAnnotationP
 	protected TransactionAttribute parseTransactionAnnotation(AnnotationAttributes attributes) {
 		RuleBasedTransactionAttribute rbta = new RuleBasedTransactionAttribute();
 
+		// 注释 9.4 解析事务注解的每一个属性
+		// propagation
 		Propagation propagation = attributes.getEnum("propagation");
 		rbta.setPropagationBehavior(propagation.value());
+		// isolation
 		Isolation isolation = attributes.getEnum("isolation");
 		rbta.setIsolationLevel(isolation.value());
 
+		// timeout
 		rbta.setTimeout(attributes.getNumber("timeout").intValue());
 		String timeoutString = attributes.getString("timeoutString");
 		Assert.isTrue(!StringUtils.hasText(timeoutString) || rbta.getTimeout() < 0,
 				"Specify 'timeout' or 'timeoutString', not both");
 		rbta.setTimeoutString(timeoutString);
 
+		// readOnly
 		rbta.setReadOnly(attributes.getBoolean("readOnly"));
+		// value
 		rbta.setQualifier(attributes.getString("value"));
 		rbta.setLabels(Set.of(attributes.getStringArray("label")));
 
 		List<RollbackRuleAttribute> rollbackRules = new ArrayList<>();
+		// rollbackFor
 		for (Class<?> rbRule : attributes.getClassArray("rollbackFor")) {
 			rollbackRules.add(new RollbackRuleAttribute(rbRule));
 		}
+		// rollbackForClassName
 		for (String rbRule : attributes.getStringArray("rollbackForClassName")) {
 			rollbackRules.add(new RollbackRuleAttribute(rbRule));
 		}
+		// noRollbackFor
 		for (Class<?> rbRule : attributes.getClassArray("noRollbackFor")) {
 			rollbackRules.add(new NoRollbackRuleAttribute(rbRule));
 		}
+		// noRollbackForClassName
 		for (String rbRule : attributes.getStringArray("noRollbackForClassName")) {
 			rollbackRules.add(new NoRollbackRuleAttribute(rbRule));
 		}

@@ -1,0 +1,20 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **BeanDefinitionReader 继承体系**
+
+
+interface BeanDefinitionReader
+abstract class AbstractBeanDefinitionReader
+class PropertiesBeanDefinitionReader
+class GroovyBeanDefinitionReader
+class XmlBeanDefinitionReader
+
+BeanDefinitionReader <|.. AbstractBeanDefinitionReader
+AbstractBeanDefinitionReader <|-- PropertiesBeanDefinitionReader
+AbstractBeanDefinitionReader <|-- GroovyBeanDefinitionReader
+AbstractBeanDefinitionReader <|-- XmlBeanDefinitionReader
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

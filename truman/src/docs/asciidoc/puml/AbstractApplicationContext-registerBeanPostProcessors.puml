@@ -1,0 +1,197 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **AbstractApplicationContext.registerBeanPostProcessors -- 注册 ""BeanPostProcessor""**
+
+
+actor Actor
+participant AbstractApplicationContext << (C,#ADD1B2) >>
+participant PostProcessorRegistrationDelegate << (C,#ADD1B2) >>
+participant ConfigurableListableBeanFactory << (I,#AB9DE1) >>
+note over ConfigurableListableBeanFactory: 为了简化，所有 ""BeanFactory"" \n 相关操作，都指向该类。
+participant List << (I,#AB9DE1) >>
+
+Actor -> AbstractApplicationContext: ""refresh""\n重塑容器
+activate AbstractApplicationContext
+    |||
+
+    AbstractApplicationContext -> AbstractApplicationContext: ""registerBeanPostProcessors""\n注册 ""BeanPostProcessor""
+    activate AbstractApplicationContext
+        AbstractApplicationContext -> PostProcessorRegistrationDelegate: ""registerBeanPostProcessors""\n处理 ""BeanPostProcessor"" 注册
+        activate PostProcessorRegistrationDelegate
+
+            PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""getBeanNamesForType""\n获取类型为 ""BeanPostProcessor"" 的 Bean 名称
+            activate ConfigurableListableBeanFactory
+            |||
+            PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+            deactivate ConfigurableListableBeanFactory
+
+            |||
+
+            PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""addBeanPostProcessor""\n添加 ""BeanPostProcessor""
+            activate ConfigurableListableBeanFactory
+            note over PostProcessorRegistrationDelegate, ConfigurableListableBeanFactory: 添加类型为 ""BeanPostProcessorChecker"" 的 ""BeanPostProcessor""
+            PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+            deactivate ConfigurableListableBeanFactory
+
+            |||
+
+            loop 第一步获取的 ""postProcessorNames""
+                alt #Fuchsia 类型匹配 ""PriorityOrdered""
+                    PostProcessorRegistrationDelegate -> List: ""add""\n添加元素
+                    activate List
+                    note over PostProcessorRegistrationDelegate, List: 添加到 ""priorityOrderedPostProcessors"" 集合中
+                    PostProcessorRegistrationDelegate <- List
+                    deactivate List
+                    |||
+                    alt 如果是 ""MergedBeanDefinitionPostProcessor"" 类型
+                        PostProcessorRegistrationDelegate -> List: ""add""\n添加元素
+                        activate List
+                        note over PostProcessorRegistrationDelegate, List: 再添加到 ""internalPostProcessors"" 集合中
+                        PostProcessorRegistrationDelegate <- List
+                        deactivate List
+                        |||
+                    end
+                    |||
+                else #Yellow 类型匹配 ""Ordered""
+                    PostProcessorRegistrationDelegate -> List: ""add""\n添加元素
+                    activate List
+                    note over PostProcessorRegistrationDelegate, List: 添加到 ""orderedPostProcessorNames"" 集合中
+                    PostProcessorRegistrationDelegate <- List
+                    deactivate List
+                    |||
+                else #DodgerBlue
+                    PostProcessorRegistrationDelegate -> List: ""add""\n添加元素
+                    activate List
+                    note over PostProcessorRegistrationDelegate, List: 添加到 ""nonOrderedPostProcessorNames"" 集合中
+                    PostProcessorRegistrationDelegate <- List
+                    deactivate List
+                    |||
+                end
+            end
+
+            group #Fuchsia
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序
+                activate PostProcessorRegistrationDelegate
+                note over PostProcessorRegistrationDelegate,PostProcessorRegistrationDelegate: 对 ""priorityOrderedPostProcessors"" 进行排序
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+                deactivate PostProcessorRegistrationDelegate
+
+                |||
+
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""registerBeanPostProcessors""\n注册 ""BeanPostProcessor""
+                activate PostProcessorRegistrationDelegate
+                    PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""addBeanPostProcessors""\n添加 ""BeanPostProcessor""
+                    activate ConfigurableListableBeanFactory
+                    note over PostProcessorRegistrationDelegate, ConfigurableListableBeanFactory: 注册 ""priorityOrderedPostProcessors"" 集合中的 ""BeanPostProcessor""
+                    PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+                    deactivate ConfigurableListableBeanFactory
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+                deactivate PostProcessorRegistrationDelegate
+                |||
+            end
+
+            |||
+
+            group #Yellow
+                loop 第一步获取的 ""orderedPostProcessorNames""
+                    PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""getBean""\n获取指定名称的 Bean
+                    activate ConfigurableListableBeanFactory
+                    note over PostProcessorRegistrationDelegate, ConfigurableListableBeanFactory: 获取 ""orderedPostProcessorNames"" 集合中的 ""BeanPostProcessor""
+                    PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+                    deactivate ConfigurableListableBeanFactory
+                end
+
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序
+                activate PostProcessorRegistrationDelegate
+                note over PostProcessorRegistrationDelegate,PostProcessorRegistrationDelegate: 对 ""orderedPostProcessorNames"" 进行排序
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+                deactivate PostProcessorRegistrationDelegate
+
+                |||
+
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""registerBeanPostProcessors""\n注册 ""BeanPostProcessor""
+                activate PostProcessorRegistrationDelegate
+                    PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""addBeanPostProcessors""\n添加 ""BeanPostProcessor""
+                    activate ConfigurableListableBeanFactory
+                    note over PostProcessorRegistrationDelegate, ConfigurableListableBeanFactory: 注册 ""orderedPostProcessorNames"" 集合中的 ""BeanPostProcessor""
+                    PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+                    deactivate ConfigurableListableBeanFactory
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+                deactivate PostProcessorRegistrationDelegate
+                |||
+            end
+
+            |||
+
+            group #DodgerBlue
+                loop 第一步获取的 ""nonOrderedPostProcessorNames""
+                    PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""getBean""\n获取指定名称的 Bean
+                    activate ConfigurableListableBeanFactory
+                    note over PostProcessorRegistrationDelegate, ConfigurableListableBeanFactory: 获取 ""nonOrderedPostProcessorNames"" 集合中的 ""BeanPostProcessor""
+                    PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+                    deactivate ConfigurableListableBeanFactory
+                    |||
+                    alt 如果是 ""MergedBeanDefinitionPostProcessor"" 类型
+                        PostProcessorRegistrationDelegate -> List: ""add""\n添加元素
+                        activate List
+                        note over PostProcessorRegistrationDelegate, List: 再添加到 ""internalPostProcessors"" 集合中
+                        PostProcessorRegistrationDelegate <- List
+                        deactivate List
+                        |||
+                    end
+                end
+
+                |||
+
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""registerBeanPostProcessors""\n注册 ""BeanPostProcessor""
+                activate PostProcessorRegistrationDelegate
+                    PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""addBeanPostProcessors""\n添加 ""BeanPostProcessor""
+                    activate ConfigurableListableBeanFactory
+                    note over PostProcessorRegistrationDelegate, ConfigurableListableBeanFactory: 注册 ""orderedPostProcessorNames"" 集合中的 ""BeanPostProcessor""
+                    PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+                    deactivate ConfigurableListableBeanFactory
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+                deactivate PostProcessorRegistrationDelegate
+                |||
+            end
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n排序
+            activate PostProcessorRegistrationDelegate
+            note over PostProcessorRegistrationDelegate,PostProcessorRegistrationDelegate: 对 ""internalPostProcessors"" 进行排序
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""registerBeanPostProcessors""\n注册 ""BeanPostProcessor""
+            activate PostProcessorRegistrationDelegate
+                PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""addBeanPostProcessors""\n添加 ""BeanPostProcessor""
+                activate ConfigurableListableBeanFactory
+                note over PostProcessorRegistrationDelegate, ConfigurableListableBeanFactory: 注册 ""internalPostProcessors"" 集合中的 ""BeanPostProcessor""\n<color red>这样处理后，这些 ""BeanPostProcessor"" 就在列表的最后，也就是最后生效。</color>
+                PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+                deactivate ConfigurableListableBeanFactory
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+            |||
+
+            PostProcessorRegistrationDelegate -> ConfigurableListableBeanFactory: ""addBeanPostProcessor""\n添加 ""BeanPostProcessor""
+            activate ConfigurableListableBeanFactory
+            note over PostProcessorRegistrationDelegate, ConfigurableListableBeanFactory: 添加类型为 ""ApplicationListenerDetector"" 的 ""BeanPostProcessor""
+            PostProcessorRegistrationDelegate <- ConfigurableListableBeanFactory
+            deactivate ConfigurableListableBeanFactory
+            |||
+        AbstractApplicationContext <- PostProcessorRegistrationDelegate
+        deactivate PostProcessorRegistrationDelegate
+    AbstractApplicationContext -> AbstractApplicationContext
+    deactivate AbstractApplicationContext
+
+    |||
+
+Actor <- AbstractApplicationContext: 完成容器初始化
+deactivate AbstractApplicationContext
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

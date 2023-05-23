@@ -1,0 +1,116 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **SpringMVC 容器初始化时序图**
+
+participant Actor
+Actor -> HttpServletBean : init
+activate HttpServletBean
+HttpServletBean -> HttpServletBean : initBeanWrapper
+activate HttpServletBean
+HttpServletBean --> HttpServletBean
+deactivate HttpServletBean
+HttpServletBean -> HttpServletBean : initServletBean
+activate HttpServletBean
+HttpServletBean -> FrameworkServlet : initServletBean
+activate FrameworkServlet
+FrameworkServlet -> FrameworkServlet : initWebApplicationContext
+activate FrameworkServlet
+FrameworkServlet -> WebApplicationContextUtils : getWebApplicationContext
+activate WebApplicationContextUtils
+WebApplicationContextUtils --> FrameworkServlet
+deactivate WebApplicationContextUtils
+
+FrameworkServlet -> FrameworkServlet : findWebApplicationContext
+activate FrameworkServlet
+FrameworkServlet --> FrameworkServlet
+deactivate FrameworkServlet
+FrameworkServlet -> FrameworkServlet : createWebApplicationContext
+activate FrameworkServlet
+FrameworkServlet -> FrameworkServlet : createWebApplicationContext
+activate FrameworkServlet
+FrameworkServlet -> FrameworkServlet : configureAndRefreshWebApplicationContext
+activate FrameworkServlet
+FrameworkServlet -> FrameworkServlet : postProcessWebApplicationContext
+activate FrameworkServlet
+FrameworkServlet --> FrameworkServlet
+deactivate FrameworkServlet
+FrameworkServlet -> ConfigurableApplicationContext : refresh
+activate ConfigurableApplicationContext
+ConfigurableApplicationContext --> FrameworkServlet
+deactivate ConfigurableApplicationContext
+FrameworkServlet --> FrameworkServlet
+deactivate FrameworkServlet
+FrameworkServlet --> FrameworkServlet
+deactivate FrameworkServlet
+FrameworkServlet --> FrameworkServlet
+deactivate FrameworkServlet
+FrameworkServlet -> FrameworkServlet : onRefresh
+activate FrameworkServlet
+
+FrameworkServlet -> DispatcherServlet : onRefresh
+activate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initStrategies
+activate DispatcherServlet #89FA4F
+DispatcherServlet -> DispatcherServlet : initMultipartResolver
+activate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initLocaleResolver
+activate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initThemeResolver
+activate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initHandlerMappings
+activate DispatcherServlet
+DispatcherServlet -> HandlerMapping : usesPathPatterns
+activate HandlerMapping
+HandlerMapping --> DispatcherServlet
+deactivate HandlerMapping
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initHandlerAdapters
+activate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initHandlerExceptionResolvers
+activate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initRequestToViewNameTranslator
+activate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initViewResolvers
+activate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet -> DispatcherServlet : initFlashMapManager
+activate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet --> DispatcherServlet
+deactivate DispatcherServlet
+DispatcherServlet --> FrameworkServlet
+deactivate DispatcherServlet
+
+FrameworkServlet --> FrameworkServlet
+deactivate FrameworkServlet
+FrameworkServlet --> FrameworkServlet
+deactivate FrameworkServlet
+FrameworkServlet -> FrameworkServlet : initFrameworkServlet
+activate FrameworkServlet
+FrameworkServlet --> FrameworkServlet
+deactivate FrameworkServlet
+FrameworkServlet --> HttpServletBean
+deactivate FrameworkServlet
+HttpServletBean --> HttpServletBean
+deactivate HttpServletBean
+return
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

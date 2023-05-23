@@ -1,0 +1,36 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **MethodMatcher 继承体系**
+
+
+interface MethodMatcher {
+    + TRUE: MethodMatcher
+    + matches(Method method, Class<?> targetClass): boolean
+    + isRuntime(): boolean
+    + matches(Method method, Class<?> targetClass, Object... args): boolean
+}
+
+class TrueMethodMatcher
+TrueMethodMatcher .right.|> MethodMatcher
+
+interface Pointcut
+Pointcut *.up. MethodMatcher
+
+abstract class DynamicMethodMatcher implements MethodMatcher
+
+abstract class DynamicMethodMatcherPointcut extends DynamicMethodMatcher implements Pointcut
+
+interface IntroductionAwareMethodMatcher extends MethodMatcher
+
+class AspectJExpressionPointcut implements IntroductionAwareMethodMatcher, Pointcut
+
+abstract class StaticMethodMatcher implements MethodMatcher
+
+class AnnotationMethodMatcher extends StaticMethodMatcher
+
+abstract class StaticMethodMatcherPointcut extends StaticMethodMatcher implements Pointcut
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.diguage.labs.Printers;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jspecify.annotations.Nullable;
@@ -265,6 +267,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
+		Printers.printf(".. %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"setBeanFactory",
+				beanFactory.getClass().getSimpleName());
 		if (!(beanFactory instanceof ConfigurableListableBeanFactory clbf)) {
 			throw new IllegalArgumentException(
 					"AutowiredAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory: " + beanFactory);
@@ -325,7 +331,17 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 	}
 
 	private InjectionMetadata findInjectionMetadata(String beanName, Class<?> beanType, RootBeanDefinition beanDefinition) {
+		Printers.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessMergedBeanDefinition",
+				beanDefinition.getClass().getSimpleName(),
+				beanType.getSimpleName(),
+				beanName);
+
+		// 收集 @Autowired、 @Value、@jakarta.inject.Inject、@javax.inject.Inject 的依赖信息
+		// 信息缓存到了 this.injectionMetadataCache 变量中，注入也是从这个变量中读取值
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, beanType, null);
+		// TODO 不知道为何还要设置的到 RootBeanDefinition.externallyManagedConfigMembers 变量中？
 		metadata.checkConfigMembers(beanDefinition);
 		return metadata;
 	}
@@ -487,8 +503,16 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
+		Printers.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessProperties",
+				pvs.getClass().getSimpleName(),
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
+			// 注入依赖
 			metadata.inject(bean, beanName, pvs);
 		}
 		catch (BeanCreationException ex) {
@@ -535,6 +559,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					if (metadata != null) {
 						metadata.clear(pvs);
 					}
+					// 构建需要处理的注解信息
 					metadata = buildAutowiringMetadata(clazz);
 					this.injectionMetadataCache.put(cacheKey, metadata);
 				}
@@ -553,6 +578,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 		do {
 			final List<InjectionMetadata.InjectedElement> fieldElements = new ArrayList<>();
+			// 检查 Bean 类的实例变量，寻找需要处理的实例属性
 			ReflectionUtils.doWithLocalFields(targetClass, field -> {
 				MergedAnnotation<?> ann = findAutowiredAnnotation(field);
 				if (ann != null) {
@@ -568,6 +594,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 			});
 
 			final List<InjectionMetadata.InjectedElement> methodElements = new ArrayList<>();
+			// 检查 Bean 类的实例方法，寻找需要处理的实例方法；
 			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
 				if (method.isBridge()) {
 					return;
@@ -600,6 +627,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 			elements.addAll(0, fieldElements);
 			targetClass = targetClass.getSuperclass();
 		}
+		// 遍历检查 Bean 类的父类信息，查找父类需要处理的注解信息。
 		while (targetClass != null && targetClass != Object.class);
 
 		return InjectionMetadata.forElements(elements, clazz);
@@ -743,7 +771,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					value = resolveFieldValue(field, bean, beanName);
 				}
 			}
-			else {
+			else { // 解析属性值
 				value = resolveFieldValue(field, bean, beanName);
 			}
 			if (value != null) {

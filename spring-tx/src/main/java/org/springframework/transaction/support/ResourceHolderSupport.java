@@ -123,6 +123,7 @@ public abstract class ResourceHolderSupport implements ResourceHolder {
 	 * @return number of seconds until expiration
 	 * @throws TransactionTimedOutException if the deadline has already been reached
 	 */
+	// 获取剩余时间（单位秒）
 	public int getTimeToLiveInSeconds() {
 		double diff = ((double) getTimeToLiveInMillis()) / 1000;
 		int secs = (int) Math.ceil(diff);
@@ -135,6 +136,7 @@ public abstract class ResourceHolderSupport implements ResourceHolder {
 	 * @return number of milliseconds until expiration
 	 * @throws TransactionTimedOutException if the deadline has already been reached
 	 */
+	// 获取剩余时间（单位毫秒）
 	public long getTimeToLiveInMillis() throws TransactionTimedOutException{
 		if (this.deadline == null) {
 			throw new IllegalStateException("No timeout specified for this resource holder");
@@ -148,6 +150,7 @@ public abstract class ResourceHolderSupport implements ResourceHolder {
 	 * Set the transaction rollback-only if the deadline has been reached,
 	 * and throw a TransactionTimedOutException.
 	 */
+	// 检查是否超时，超时则设置回滚并抛出TransactionTimedOutException异常
 	private void checkTransactionTimeout(boolean deadlineReached) throws TransactionTimedOutException {
 		if (deadlineReached) {
 			setRollbackOnly();

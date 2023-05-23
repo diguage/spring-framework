@@ -16,11 +16,46 @@
 
 package org.springframework.beans.factory.config;
 
+import com.diguage.labs.Printers;
+
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
 
 /**
+ * BeanPostProcessor是Spring框架的提供的一个扩展类点（不止一个）
+ * 通过实现BeanPostProcessor接口，程序员就可插手bean实例化的过程,从而减轻了beanFactory的负担
+ * 值得说明的是这个接口可以设置多个，会形成一个列表，然后依次执行
+ * (但是spring默认的怎么办？set)
+ * 比如AOP就是在bean实例后期间将切面逻辑织入bean实例中的
+ * AOP也正是通过BeanPostProcessor和IOC容器建立起了联系
+ * （由spring提供的默认的PostPorcessor,spring提供了很多默认的PostProcessor,下面我会一一介绍这些实现类的功能）
+ * 可以来演示一下 BeanPostProcessor 的使用方式（把动态代理和IOC、aop结合起来使用）
+ * 在演示之前先来熟悉一下这个接口，其实这个接口本身特别简单，简单到你发指
+ * 但是他的实现类特别复杂，同样复杂到发指！
+ * 可以看看spring提供哪些默认的实现（前方高能）
+ * 查看类的关系图可以知道spring提供了以下的默认实现，因为高能，故而我们只是解释几个常用的
+ * 1、ApplicationContextAwareProcessor （acap）
+ *    acap后置处理器的作用是，当应用程序定义的Bean实现ApplicationContextAware接口时注入ApplicationContext对象
+ *    当然这是他的第一个作业，他还有其他作用，这里不一一列举了，可以参考源码
+ *    我们可以针对ApplicationContextAwareProcessor写一个栗子
+ *  2、InitDestroyAnnotationBeanPostProcessor
+ *     用来处理自定义的初始化方法和销毁方法
+ *    上次说过Spring中提供了3种自定义初始化和销毁方法分别是
+ *    一、通过@Bean指定init-method和destroy-method属性
+ *    二、Bean实现InitializingBean接口和实现DisposableBean
+ *    三、@PostConstruct：@PreDestroy
+ *    为什么spring通这三种方法都能完成对bean生命周期的回调呢？
+ *    可以通过InitDestroyAnnotationBeanPostProcessor的源码来解释
+ *  3、InstantiationAwareBeanPostProcessor
+ *  4、CommonAnnotationBeanPostProcessor
+ *  5、AutowiredAnnotationBeanPostProcessor
+ *  6 、RequiredAnnotationBeanPostProcessor
+ *  7、BeanValidationPostProcessor
+ *  8、AbstractAutoProxyCreator
+ *  ......
+ *  后面会一一解释
+ *
  * Factory hook that allows for custom modification of new bean instances &mdash;
  * for example, checking for marker interfaces or wrapping beans with proxies.
  *
@@ -59,6 +94,16 @@ import org.springframework.beans.BeansException;
 public interface BeanPostProcessor {
 
 	/**
+	 * 在bean初始化之前执行
+	 *
+	 * Bean实例已经创建好了，只是没有执行各种初始化回调。
+	 *
+	 * 使用 beanFactory.addBeanPostProcessor(new LogBeanPostProcessor()); 配置，则能应用于所有的 Bean 创建，包括内置 Bean。
+	 *
+	 * 但是，如果使用 @Import(LogBeanPostProcessor.class) 配置，则只能应用于用户自定义的 Bean 的创建，不能应用于内置 Bean 的创建。
+	 *
+	 * 如果使用 @Bean 配置，则配置类自身也不会被应用。
+	 *
 	 * Apply this {@code BeanPostProcessor} to the given new bean instance <i>before</i> any bean
 	 * initialization callbacks (like InitializingBean's {@code afterPropertiesSet}
 	 * or a custom init-method). The bean will already be populated with property values.
@@ -72,10 +117,18 @@ public interface BeanPostProcessor {
 	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet
 	 */
 	default @Nullable Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		Printers.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		return bean;
 	}
 
 	/**
+	 * 初始化之后
+	 *
 	 * Apply this {@code BeanPostProcessor} to the given new bean instance <i>after</i> any bean
 	 * initialization callbacks (like InitializingBean's {@code afterPropertiesSet}
 	 * or a custom init-method). The bean will already be populated with property values.
@@ -97,6 +150,12 @@ public interface BeanPostProcessor {
 	 * @see org.springframework.beans.factory.FactoryBean
 	 */
 	default @Nullable Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		Printers.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessAfterInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		return bean;
 	}
 

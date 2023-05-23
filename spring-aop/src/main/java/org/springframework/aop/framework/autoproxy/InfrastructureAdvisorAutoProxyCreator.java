@@ -28,6 +28,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
  * @author Juergen Hoeller
  * @since 2.0.7
  */
+// 实现了 InstantiationAwareBeanPostProcessor 接口，
+// 也就是说在 Spring 容器中，所有 bean 实例化时，Spring 都会保证调用其 postProcessAfterInitialization 方法。
 @SuppressWarnings("serial")
 public class InfrastructureAdvisorAutoProxyCreator extends AbstractAdvisorAutoProxyCreator {
 

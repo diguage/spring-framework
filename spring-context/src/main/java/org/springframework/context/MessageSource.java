@@ -21,6 +21,14 @@ import java.util.Locale;
 import org.jspecify.annotations.Nullable;
 
 /**
+ * 国际化信息的访问接口，支持国际化。
+ * <ul>
+ *     <li>StaticMessageSource -- 可以通过编程的方式添加信息条目，多用于测试，不应该用于正式的生产环境。</li>
+ *     <li>ResourceBundleMessageSource -- 基于 ResourceBundle 实现，做了优化，最常用的、用于正式生产环境。</li>
+ *     <li>ReloadableResourceBundleMessageSource -- 定期刷新并检查底层的properties资源
+ *     文件是否有变更。使用时， 应该避免将信息资源文件放到 classpath 中，不利于重新加载。</li>
+ * </ul>
+ *
  * Strategy interface for resolving messages, with support for the parameterization
  * and internationalization of such messages.
  *

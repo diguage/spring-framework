@@ -1,0 +1,25 @@
+= 占位符解析
+
+.`PropertyPlaceholderHelper.parseStringValue`
+[{java_src_attr}]
+----
+include::{core_src_dir}/util/PropertyPlaceholderHelper.java[tag=parseStringValue]
+----
+
+
+// .`PropertyPlaceholderHelper.findPlaceholderEndIndex`
+// [{java_src_attr}]
+// ----
+// include::{core_src_dir}/util/PropertyPlaceholderHelper.java[tag=findPlaceholderEndIndex]
+// ----
+
+plantuml::{includedir}/puml/org.springframework.context.config.PropertyPlaceholderBeanDefinitionParser.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/org.springframework.context.config.PropertyPlaceholderBeanDefinitionParser-parse.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/org.springframework.context.support.PropertySourcesPlaceholderConfigurer.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.puml[{diagram_attr}]
+
+
+. 可以解析到其他的 `PropertySourcesPlaceholderConfigurer` 吗？或者可以配置多个 `PropertySourcesPlaceholderConfigurer` 吗？

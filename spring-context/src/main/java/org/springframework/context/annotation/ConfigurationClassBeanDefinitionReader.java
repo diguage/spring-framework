@@ -114,6 +114,7 @@ class ConfigurationClassBeanDefinitionReader {
 	}
 
 
+	// tag::loadBeanDefinitions[]
 	/**
 	 * Read {@code configurationModel}, registering bean definitions
 	 * with the registry based on its contents.
@@ -124,7 +125,9 @@ class ConfigurationClassBeanDefinitionReader {
 			loadBeanDefinitionsForConfigurationClass(configClass, trackedConditionEvaluator);
 		}
 	}
+	// end::loadBeanDefinitions[]
 
+	// tag::loadBeanDefinitionsForConfigurationClass[]
 	/**
 	 * Read a particular {@link ConfigurationClass}, registering bean definitions
 	 * for the class itself and all of its {@link Bean} methods.
@@ -152,6 +155,7 @@ class ConfigurationClassBeanDefinitionReader {
 		loadBeanDefinitionsFromImportBeanDefinitionRegistrars(configClass.getImportBeanDefinitionRegistrars());
 		loadBeanDefinitionsFromBeanRegistrars(configClass.getBeanRegistrars());
 	}
+	// end::loadBeanDefinitionsForConfigurationClass[]
 
 	/**
 	 * Register the {@link Configuration} class itself as a bean definition.
@@ -184,6 +188,8 @@ class ConfigurationClassBeanDefinitionReader {
 	}
 
 	/**
+	 * 由此可以看出，对 `@Bean` 的处理复用了自定义 `factory-method` 的处理。
+	 *
 	 * Read the given {@link BeanMethod}, registering bean definitions
 	 * with the BeanDefinitionRegistry based on its contents.
 	 */
@@ -243,7 +249,12 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 		else {
 			// instance @Bean method
+			// 这里设置 factoryBeanName 和 factoryMethodName。
+			// 可以通过 BeanDefinitionParserDelegate.FACTORY_METHOD_ATTRIBUTE
+			// 与 BeanDefinitionParserDelegate.FACTORY_BEAN_ATTRIBUTE 两个常量找到
+			// 对 `factory-method` 与 `factory-bean` 的处理
 			beanDef.setFactoryBeanName(configClass.getBeanName());
+			// 底层调用了 setFactoryMethodName 方法，与对 `factory-method` 的处理一致了。
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}
 
@@ -374,6 +385,7 @@ class ConfigurationClassBeanDefinitionReader {
 		return true;
 	}
 
+  // tag::loadBeanDefinitionsFromImportedResources[]
 	private void loadBeanDefinitionsFromImportedResources(
 			Map<String, Class<? extends BeanDefinitionReader>> importedResources) {
 
@@ -414,13 +426,16 @@ class ConfigurationClassBeanDefinitionReader {
 			reader.loadBeanDefinitions(resource);
 		});
 	}
+  // end::loadBeanDefinitionsFromImportedResources[]
 
+  // tag::loadBeanDefinitionsFromRegistrars[]
 	private void loadBeanDefinitionsFromImportBeanDefinitionRegistrars(
 			Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> registrars) {
 
 		registrars.forEach((registrar, metadata) ->
 				registrar.registerBeanDefinitions(metadata, this.registry, this.importBeanNameGenerator));
 	}
+  // end::loadBeanDefinitionsFromRegistrars[]
 
 	private void loadBeanDefinitionsFromBeanRegistrars(MultiValueMap<String, BeanRegistrar> registrars) {
 		if (!(this.registry instanceof ListableBeanFactory beanFactory)) {

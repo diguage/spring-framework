@@ -238,6 +238,8 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 	protected void doProcessProperties(ConfigurableListableBeanFactory beanFactoryToProcess,
 			StringValueResolver valueResolver) {
 
+		// 注意：这里使用上面传过来的 StringValueResolver 对象创建了 BeanDefinitionVisitor 对象
+		// 后续调用 visitor.visitBeanDefinition(bd) 时，就会使用 StringValueResolver 对象来解析其属性。
 		BeanDefinitionVisitor visitor = new BeanDefinitionVisitor(valueResolver);
 
 		String[] beanNames = beanFactoryToProcess.getBeanDefinitionNames();
@@ -247,6 +249,7 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 			if (!(curName.equals(this.beanName) && beanFactoryToProcess.equals(this.beanFactory))) {
 				BeanDefinition bd = beanFactoryToProcess.getBeanDefinition(curName);
 				try {
+					// 使用 Visitor 模式处理 BeanDefinition 的各种属性
 					visitor.visitBeanDefinition(bd);
 				}
 				catch (Exception ex) {
@@ -256,9 +259,16 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 		}
 
 		// Resolve placeholders in alias target names and aliases as well.
+		// 解析别名 alias 中使用的占位符
 		beanFactoryToProcess.resolveAliases(valueResolver);
 
 		// Resolve placeholders in embedded values such as annotation attributes.
+		// 解析嵌入值中的占位符，例如注释属性。
+		// 其实，@Value 等注解中的占位符是并不是在这里解析的。这里仅仅是把 valueResolver
+		// 对象加入到 AbstractBeanFactory.embeddedValueResolvers 中，后续通过调用
+		// AbstractBeanFactory.resolveEmbeddedValue 方法来解析注解中的占位符
+		// 跟踪 resolveEmbeddedValue 方法的调用，就可以发现，占位符的处理是
+		// 在 AutowiredAnnotationBeanPostProcessor.postProcessProperties 中完成处理的
 		beanFactoryToProcess.addEmbeddedValueResolver(valueResolver);
 	}
 

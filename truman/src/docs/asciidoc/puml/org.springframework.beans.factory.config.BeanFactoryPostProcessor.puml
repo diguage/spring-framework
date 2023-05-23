@@ -1,0 +1,49 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **BeanFactoryPostProcessor 继承关系**
+
+
+interface BeanFactoryPostProcessor {
+  + void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
+}
+
+interface BeanDefinitionRegistryPostProcessor extends BeanFactoryPostProcessor {
+  + void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry)
+}
+
+class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered
+
+class CustomAutowireConfigurer implements BeanFactoryPostProcessor, Ordered
+
+class CustomEditorConfigurer implements BeanFactoryPostProcessor, Ordered
+
+class CustomScopeConfigurer implements BeanFactoryPostProcessor, Ordered
+
+class DeprecatedBeanWarner implements BeanFactoryPostProcessor
+
+class EventListenerMethodProcessor implements BeanFactoryPostProcessor
+
+abstract class PropertyResourceConfigurer extends PropertiesLoaderSupport implements BeanFactoryPostProcessor, PriorityOrdered {
+    - order = Ordered.LOWEST_PRECEDENCE
+}
+
+abstract class PlaceholderConfigurerSupport extends PropertyResourceConfigurer
+
+class PreferencesPlaceholderConfigurer <<Deprecated>>
+
+class PreferencesPlaceholderConfigurer extends PropertyPlaceholderConfigurer
+
+class PropertyOverrideConfigurer extends PropertyResourceConfigurer
+
+class "~PropertyPlaceholderConfigurer~" as PropertyPlaceholderConfigurer <<Deprecated>>
+
+class PropertyPlaceholderConfigurer extends PlaceholderConfigurerSupport
+
+class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerSupport
+
+PreferencesPlaceholderConfigurer .left.> PropertySourcesPlaceholderConfigurer : 推荐
+PropertyPlaceholderConfigurer .left.> PropertySourcesPlaceholderConfigurer : 推荐
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

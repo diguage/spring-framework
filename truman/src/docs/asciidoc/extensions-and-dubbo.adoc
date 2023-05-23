@@ -1,0 +1,605 @@
+= 整合 Apache Dubbo
+
+在上一篇文章 https://www.diguage.com/post/spring-extensions-overview/[Spring 扩展点概览及实践^] 中介绍了 Spring 内部存在的扩展点。 https://www.diguage.com/post/spring-extensions-and-mybatis/[Spring 扩展点实践：整合 MyBATIS^] 中，D瓜哥带大家了解了一下 MyBATIS 如何利用 Spring 的扩展点实现了与 Spring 的完美整合。现在，学以致用，我们继续来分析一下 Spring 与 Apache Dubbo 的整合流程。
+
+
+== 示例程序
+
+Apache Dubbo 仓库中就有很完整的示例。D瓜哥直接拿来使用就不再搭建示例程序了。
+
+首先，需要启动一个 ZooKeeper 实例。查看 Dubbo 的依赖可以看出，最新版代码依赖的 ZooKeeper 是 3.4.13 版。所以，为了最好的兼容性，就要选用 3.4.X 版的 ZooKeeper 服务器。D瓜哥直接使用 Docker 启动 ZooKeeper 了。命令如下：
+
+[source,bash,{source_attr}]
+----
+docker run --rm --name zookeeper -d -p 2181:2181 zookeeper:3.4.14
+----
+
+这次我们使用 https://github.com/apache/dubbo[Apache Dubbo^] 的 `dubbo-demo/dubbo-demo-xml` 示例。
+
+第二步，启动服务提供者程序，找到 `DUBBO/dubbo-demo/dubbo-demo-xml/dubbo-demo-xml-provider/src/main/java/org/apache/dubbo/demo/provider/Application.java`，运行该类。
+
+第三步，运行服务消费者程序，找到 `DUBBO/dubbo-demo/dubbo-demo-xml/dubbo-demo-xml-consumer/src/main/java/org/apache/dubbo/demo/consumer/Application.java`，运行该类。
+
+如果没有任何错误，则在终端可以看到 `result: async result` 输出。
+
+在开始正餐之前，D瓜哥先给大家来个开胃菜。
+
+== Spring 插件机制简介
+
+不知道大家有没有想过一个问题：Spring 框架是如何支持越来越多的功能的？
+
+在D瓜哥了解到 Spring 的插件机制后，非常叹服 Spring 精巧的设计和灵活的扩展性。闲言少叙，好戏上演。
+
+这里再问大家一个问题：
+
+[source,xml,{source_attr}]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:dubbo="http://dubbo.apache.org/schema/dubbo"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           https://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/aop
+                           https://www.springframework.org/schema/aop/spring-aop.xsd
+                           http://www.springframework.org/schema/context
+                           https://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/tx
+                           https://www.springframework.org/schema/tx/spring-tx.xsd
+                           http://dubbo.apache.org/schema/dubbo 
+                           http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
+
+	<context:annotation-config/>
+
+	<tx:annotation-driven proxy-target-class="true" order="0"/>
+
+	<aop:config>
+		<aop:advisor pointcut="execution(* *..ITestBean.*(..))" advice-ref="txAdvice"/>
+	</aop:config>
+
+	<tx:advice id="txAdvice">
+		<tx:attributes>
+			<tx:method name="get*" timeout="5" read-only="true"/>
+			<tx:method name="set*"/>
+			<tx:method name="exceptional"/>
+		</tx:attributes>
+	</tx:advice>
+
+
+	<bean id="transactionManager" class="org.springframework.transaction.testfixture.CallCountingTransactionManager"/>
+
+	<bean id="testBean" class="org.springframework.beans.testfixture.beans.TestBean"/>
+
+</beans>
+----
+
+这是非常典型的 Spring XML 配置。相信大家都见过。大家有没有想过，Spring 是怎么处理这些不同的命名空间的？如果说 AOP、事务这些是 Spring 内置支持的功能，这样配置，Spring 可以正确解析。但是，Dubbo 的配置又是怎么回事？
+
+要回答这个问题，就要说起 Spring 的插件机制。在 Spring 的插件机制面前，无论是 Dubbo，还是 Spring 的 AOP、事务管理都是人人平等的。它们都是依靠 Spring 的插件机制插拔在 Spring 核心模块之上的。
+
+这篇文章不是专门介绍 Spring 插件机制的。这里抛砖引玉，对 Spring 插件机制做个简介。后续有机会再做更详细的介绍和说明。
+
+要利用 Spring 插件机制，需要做这么几个事情：
+
+. 定义自己业务的类。
+. 编写 XSD 文件，定义自己的 XML 格式，将文件放在 `src/main/resources/META-INF` 目录下。
+. 针对每一个标签，定义一个实现 `BeanDefinitionParser` 接口的类，在 `parse` 方法中完成对这个标签的解析工作，将其转化成一个 `BeanDefinition` 对象。
+. 继承 `NamespaceHandlerSupport` 类，在 `init()` 方法中，使用 `registerBeanDefinitionParser()` 将标签名称和上面写的 `BeanDefinitionParser` 实现类之间建起起对应关系。
+. 创建 `src/main/resources/META-INF/spring.schemas` 文件，在其中写上： `https\://www.diguage.com/schema/diguage/diguage.xsd=META-INF/diguage.xsd`，为该 XSD 文件定义唯一的命名空间。
+. 创建 `src/main/resources/META-INF/spring.handlers` 文件，在其中写上： `https\://www.diguage.com/schema/diguage=com.diguage.schema.DiguageNamespaceHandler`。
+
+完成上面这些步骤就相当于制作了一个 Spring 插件。这样就可以在 Spring XML 配置文件中，像使用 AOP、事务管理那样来使用这个新插件了。
+
+仔细想想，Spring 的插件机制还是挺简单的：首先，定义一个 Bean 类，然后设计 XSD 文件来对 Bean 的属性进行定义。用户在使用插件时，使用 XML 来定义 Bean 类的属性值，再自定义的 `BeanDefinitionParser` 实现类将 XML 中的配置信息解析出来，封装在 `BeanDefinition`（关于 `BeanDefinition` 的更多信息，请移步 https://www.diguage.com/post/dive-into-spring-core-data-structure-bean-definition/[深入剖析 Spring 核心数据结构：BeanDefinition^]）。到了 `BeanDefinition` 之后，Spring 在内部就可以统一处理了。
+
+下面，结合代理来具体说明一下 Apache Dubbo 的实现过程。
+
+== Apache Dubbo 插件机制解析
+
+Apache Dubbo 最初就说通过 Spring 插件机制实现了它与 Spring 的整合过程。
+
+. 相关业务类有 `ApplicationConfig`、 `ModuleConfig`、 `RegistryConfig`、 `ConfigCenterBean`、 `MetadataReportConfig`、 `MonitorConfig`、 `MetricsConfig`、 `SslConfig`、 `ProviderConfig`、 `ConsumerConfig`、 `ProtocolConfig`、 `ServiceBean` 和 `ReferenceBean`。这些类的命名也都非常讲究，见文知意，与 Dubbo 常见配置可以说是一一对应。
+. Dubbo 的 XSD 定义在 https://github.com/apache/dubbo/blob/master/dubbo-config/dubbo-config-spring/src/main/resources/META-INF/dubbo.xsd[dubbo.xsd^]，懂 XSD 的朋友应该都能看出来，这个文件就是规范上一步提到的类的属性的。
+. `DubboBeanDefinitionParser` 实现了 `BeanDefinitionParser` 接口，用于解析 XML 配置，并将其“翻译”为第一步中那些类的对象。另外，还注册了一个 `AnnotationBeanDefinitionParser`，用来处理 `annotation` 标签，进而用来处理注解。
+. `DubboNamespaceHandler` 继承了 `NamespaceHandlerSupport`，并且在 `init()` 方法中完成了对上述类的 `DubboBeanDefinitionParser` 注册。
+. 在 `dubbo-config/dubbo-config-spring/src/main/resources/META-INF` 目录下，有 `spring.schemas` 文件和 `spring.handlers` 文件。
+
+下面以调试跟进的方式来分析整个处理过程。
+
+== Apache Dubbo 配置解析
+
+这里使用示例程序中的配置文件：
+
+.`dubbo-demo/dubbo-demo-xml/dubbo-demo-xml-provider/src/main/resources/spring/dubbo-provider.xml`
+[source,xml,{source_attr}]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://dubbo.apache.org/schema/dubbo"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://dubbo.apache.org/schema/dubbo
+                           http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
+
+    <dubbo:application metadata-type="remote" name="demo-provider"/>
+    
+    <dubbo:metadata-report address="zookeeper://127.0.0.1:2181"/>
+
+    <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
+
+    <dubbo:protocol name="dubbo"/>
+
+    <bean id="demoService" class="org.apache.dubbo.demo.provider.DemoServiceImpl"/>
+
+    <dubbo:service interface="org.apache.dubbo.demo.DemoService" ref="demoService"/>
+</beans>
+----
+
+在 `org.apache.dubbo.config.spring.schema.DubboNamespaceHandler#init` 方法、 `org.apache.dubbo.config.spring.schema.DubboNamespaceHandler#parse` 方法 和 `org.apache.dubbo.config.spring.schema.DubboBeanDefinitionParser#parse(Element, ParserContext)` 方法打断点开始调试。注意：这三个方法都是重载方法，很容易识别。
+
+打好断点后重启服务提供者程序，程序会在 `init()` 方法处暂停：
+
+.`org.apache.dubbo.config.spring.schema.DubboNamespaceHandler#init`
+[{java_src_attr}]
+----
+    @Override
+    public void init() {
+        registerBeanDefinitionParser("application", new DubboBeanDefinitionParser(ApplicationConfig.class, true));
+        registerBeanDefinitionParser("module", new DubboBeanDefinitionParser(ModuleConfig.class, true));
+        registerBeanDefinitionParser("registry", new DubboBeanDefinitionParser(RegistryConfig.class, true));
+        registerBeanDefinitionParser("config-center", new DubboBeanDefinitionParser(ConfigCenterBean.class, true));
+        registerBeanDefinitionParser("metadata-report", new DubboBeanDefinitionParser(MetadataReportConfig.class, true));
+        registerBeanDefinitionParser("monitor", new DubboBeanDefinitionParser(MonitorConfig.class, true));
+        registerBeanDefinitionParser("metrics", new DubboBeanDefinitionParser(MetricsConfig.class, true));
+        registerBeanDefinitionParser("ssl", new DubboBeanDefinitionParser(SslConfig.class, true));
+        registerBeanDefinitionParser("provider", new DubboBeanDefinitionParser(ProviderConfig.class, true));
+        registerBeanDefinitionParser("consumer", new DubboBeanDefinitionParser(ConsumerConfig.class, true));
+        registerBeanDefinitionParser("protocol", new DubboBeanDefinitionParser(ProtocolConfig.class, true));
+        registerBeanDefinitionParser("service", new DubboBeanDefinitionParser(ServiceBean.class, true));
+        registerBeanDefinitionParser("reference", new DubboBeanDefinitionParser(ReferenceBean.class, false));
+        registerBeanDefinitionParser("annotation", new AnnotationBeanDefinitionParser());
+    }
+----
+
+从这里可以明显看到，都注册哪些 `BeanDefinitionParser`，都需要处理哪些标签。点击 `registerBeanDefinitionParser` 方法就可以看出，所谓的“注册”其实就是将它们放在了 `org.springframework.beans.factory.xml.NamespaceHandlerSupport#Map<String, BeanDefinitionParser> parsers` 变量中。
+
+这里不要深究，继续向下执行，就会到了 `DubboNamespaceHandler#parse` 方法：
+
+.`org.apache.dubbo.config.spring.schema.DubboNamespaceHandler#parse`
+[{java_src_attr}]
+----
+    @Override
+    public BeanDefinition parse(Element element, ParserContext parserContext) {
+        BeanDefinitionRegistry registry = parserContext.getRegistry();
+        registerAnnotationConfigProcessors(registry);
+        /**
+         * @since 2.7.8
+         * issue : https://github.com/apache/dubbo/issues/6275
+         */
+        registerCommonBeans(registry);
+        BeanDefinition beanDefinition = super.parse(element, parserContext);
+        setSource(beanDefinition);
+        return beanDefinition;
+    }
+----
+
+这里，我们需要注意的是 `registerCommonBeans(registry)` 方法：
+
+[#register-common-beans]
+.`org.apache.dubbo.config.spring.util.DubboBeanUtils#registerCommonBeans`
+[{java_src_attr}]
+----
+    /**
+     * Register the common beans
+     *
+     * @param registry {@link BeanDefinitionRegistry}
+     * @see ReferenceAnnotationBeanPostProcessor
+     * @see DubboConfigDefaultPropertyValueBeanPostProcessor
+     * @see DubboConfigAliasPostProcessor
+     * @see DubboLifecycleComponentApplicationListener
+     * @see DubboBootstrapApplicationListener
+     */
+    static void registerCommonBeans(BeanDefinitionRegistry registry) {
+
+        // Since 2.5.7 Register @Reference Annotation Bean Processor as an infrastructure Bean
+        registerInfrastructureBean(registry, ReferenceAnnotationBeanPostProcessor.BEAN_NAME,
+                ReferenceAnnotationBeanPostProcessor.class);
+
+        // Since 2.7.4 [Feature] https://github.com/apache/dubbo/issues/5093
+        registerInfrastructureBean(registry, DubboConfigAliasPostProcessor.BEAN_NAME,
+                DubboConfigAliasPostProcessor.class);
+
+        // Since 2.7.5 Register DubboLifecycleComponentApplicationListener as an infrastructure Bean
+        registerInfrastructureBean(registry, DubboLifecycleComponentApplicationListener.BEAN_NAME,
+                DubboLifecycleComponentApplicationListener.class);
+
+        // Since 2.7.4 Register DubboBootstrapApplicationListener as an infrastructure Bean
+        registerInfrastructureBean(registry, DubboBootstrapApplicationListener.BEAN_NAME,
+                DubboBootstrapApplicationListener.class);
+
+        // Since 2.7.6 Register DubboConfigDefaultPropertyValueBeanPostProcessor as an infrastructure Bean
+        registerInfrastructureBean(registry, DubboConfigDefaultPropertyValueBeanPostProcessor.BEAN_NAME,
+                DubboConfigDefaultPropertyValueBeanPostProcessor.class);
+    }
+----
+
+这里需要重点关注的是 `ReferenceAnnotationBeanPostProcessor` 和 `DubboBootstrapApplicationListener`，前者设计到 Dubbo 注解的处理，后者着牵涉整个 Dubbo 的启动。先在 `DubboBootstrapApplicationListener` 的 `onApplicationContextEvent` 方法上打上断点。后续涉及到时，再具体分析。
+
+然后，我们单步调试，跟进 `BeanDefinition beanDefinition = super.parse(element, parserContext);` 这个调用中：
+
+
+.`org.springframework.beans.factory.xml.NamespaceHandlerSupport`
+[{java_src_attr}]
+----
+include::{beans_src_dir}/factory/xml/NamespaceHandlerSupport.java[tag=parse]
+
+include::{beans_src_dir}/factory/xml/NamespaceHandlerSupport.java[tag=findParserForElement]
+----
+
+结合上面的 `init()`，上面是“放”，现在是根据标签名称来“拿”。这样就找到每个标签对应的 `BeanDefinitionParser`。这些 `BeanDefinitionParser` 的作用就是处理对应的标签并将其转化为 `BeanDefinition`。
+
+Dubbo XML 配置的解析就这么些，后续的过程要依赖 Spring 的流程了。
+
+== Dubbo 暴露服务提供者的过程
+
+让程序继续执行，就到了我们上面打断点的地方： `DubboBootstrapApplicationListener#onApplicationContextEvent`。一路单步调试跟下去，就到了 `DubboBootstrap#start` 方法。到这一步，Dubbo 就开始启动了。
+
+`start()` 方法中，调用了 `DubboBootstrap#initialize` 方法，这个方法就有点像 Spring 的 `AbstractApplicationContext#refresh` 方法。如果分析 Dubbo 的源代码，这必定是一个好的入口。在 `initialize()` 方法中，Dubbo 完成了以下功能：
+
+. `initFrameworkExts()` -- 初始化框架
+. `startConfigCenter()` -- 启动配置中心
+. `loadRemoteConfigs()` -- 加载远程配置
+. `checkGlobalConfigs()` -- 检查全局配置
+. `startMetadataCenter()` -- 开始元数据中心，这里特别标明是从 2.7.8 开始的。
+. `initMetadataService()` -- 初始化元数据服务
+. `initMetadataServiceExports()` -- 初始化元数据服务导出
+. `initEventListener()` -- 初始化时间监听。
+
+WARNING: 暂时没有深入研究这些方法的实现。说明也都是直译的方法名。
+
+继续向下执行，进入 `DubboBootstrap#exportServices` 方法：
+
+.`org.apache.dubbo.config.bootstrap.DubboBootstrap#exportServices`
+[{java_src_attr}]
+----
+    private void exportServices() {
+        configManager.getServices().forEach(sc -> {
+            // TODO, compatible with ServiceConfig.export()
+            ServiceConfig serviceConfig = (ServiceConfig) sc;
+            serviceConfig.setBootstrap(this);
+
+            if (exportAsync) {
+                ExecutorService executor = executorRepository.getServiceExporterExecutor();
+                Future<?> future = executor.submit(() -> {
+                    sc.export();
+                    exportedServices.add(sc);
+                });
+                asyncExportingFutures.add(future);
+            } else {
+                sc.export();
+                exportedServices.add(sc);
+            }
+        });
+    }
+----
+
+在这里可以清楚看到，Dubbo 通过 `org.apache.dubbo.config.ServiceConfig#export` 方法把服务暴露到注册中心的。由于这不是 Dubbo 源码分析，所以，实现细节就不再介绍了。
+
+不知道大家有没有一个疑问：这里的 `configManager.getServices()` 是如何获取带业务实现类对象呢？
+
+要回答这个问题，需要查看一下 `configManager.getServices()` 返回的是 `Collection<ServiceConfigBase>` 对象。我们就从 `ServiceConfigBase` 上找原因。经过研究发现， `ServiceConfigBase` 是 `org.apache.dubbo.config.AbstractConfig` 的子类，而 `AbstractConfig` 中有一个 `addIntoConfigManager` 方法如下：
+
+
+.`org.apache.dubbo.config.AbstractConfig#addIntoConfigManager`
+[{java_src_attr}]
+----
+    @PostConstruct
+    public void addIntoConfigManager() {
+        ApplicationModel.getConfigManager().addConfig(this);
+    }
+----
+
+阅读过 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 文章的朋友应该都清楚，使用 `@PostConstruct` 的方法会在 Bean 创建过程中，由 `AbstractAutowireCapableBeanFactory#invokeInitMethods` 方法来统一调用。所以，如果在上面这个方法中打断点，就可以看到调用过程了。
+
+另外，这里给大家介绍一个小技巧：追本溯源，现在开始。从上面的 `configManager.getServices()` 开始，一步一步打开源代码就会发现, 这些数据是从 `org.apache.dubbo.config.context.ConfigManager#configsCache` 变量中获取的，那就在这个类中搜 `configsCache`，找到向这个变量添加元素的地方，会找到如下方法：
+
+.`org.apache.dubbo.config.context.ConfigManager#addConfig(AbstractConfig, boolean)`
+[{java_src_attr}]
+----
+    protected void addConfig(AbstractConfig config, boolean unique) {
+        if (config == null) {
+            return;
+        }
+        write(() -> {
+            Map<String, AbstractConfig> configsMap = configsCache.computeIfAbsent(getTagName(config.getClass()), type -> newMap());
+            addIfAbsent(config, configsMap, unique);
+        });
+    }
+----
+
+而且，整个类中，这一个地方是向 `configsCache` 变量添加元素的。在这个类打断点，你就看到所有添加的变量信息。再次启动服务提供者程序，你会发现上面提到的相关业务类 `ApplicationConfig`、 `ModuleConfig`、 `RegistryConfig`、 `ConfigCenterBean`、 `MetadataReportConfig`、 `MonitorConfig`、 `MetricsConfig`、 `SslConfig`、 `ProviderConfig`、 `ConsumerConfig`、 `ProtocolConfig`、 `ServiceBean` 和 `ReferenceBean` 都是 `AbstractConfig` 的子类。换句话说，这些类的实例都会注册到 `ConfigManager` 中。
+
+
+洋洋洒洒又写了好长好长。还有很多东西没写呢，比如 Dubbo 注解的集成实现，Dubbo 服务消费者的创建过程。限于篇幅原因，这些内容就放在下一篇文章介绍。
+
+== Dubbo 生成服务消费者的过程
+
+先来看看 XML 配置文件：
+
+.`dubbo-demo/dubbo-demo-xml/dubbo-demo-xml-consumer/src/main/resources/spring/dubbo-consumer.xml`
+[{java_src_attr}]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://dubbo.apache.org/schema/dubbo"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://dubbo.apache.org/schema/dubbo
+                           http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
+
+    <dubbo:application name="demo-consumer"/>
+
+    <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
+
+    <dubbo:reference id="demoService" check="false" interface="org.apache.dubbo.demo.DemoService"/>
+
+</beans>
+----
+
+我们先看一下 `ReferenceBean` 类的声明：
+
+.`org.apache.dubbo.config.spring.ReferenceBean`
+[{java_src_attr}]
+----
+public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
+        ApplicationContextAware, InitializingBean, DisposableBean {
+
+    // 此处省略 N 行代码
+
+    @Override
+    public Object getObject() {
+        return get();
+    }
+
+    // 此处省略 N 行代码
+
+    @Override
+    @SuppressWarnings({"unchecked"})
+    public void afterPropertiesSet() throws Exception {
+
+        // Initializes Dubbo's Config Beans before @Reference bean autowiring
+        prepareDubboConfigBeans();
+
+        // lazy init by default.
+        if (init == null) {
+            init = false;
+        }
+
+        // eager init if necessary.
+        if (shouldInit()) {
+            getObject();
+        }
+    }
+
+    // 此处省略 N 行代码
+}
+----
+
+这个类实现了 `FactoryBean` 接口，D瓜哥在 https://www.diguage.com/post/spring-extensions-overview/#factory-bean[Spring 扩展点概览及实践：FactoryBean] 中对 `FactoryBean` 介绍。所以，请在上面的 `getObject()` 打个断点。
+
+另外，这个类还实现了 `InitializingBean`，D瓜哥在 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述] 中介绍了这个接口的用途。不了解的，请移步。
+
+启动服务消费者程序，开始调试代码。跳过上文结束的配置解析阶段，进入到 `org.apache.dubbo.config.bootstrap.DubboBootstrap#start` 方法中。在这里，它调用了内部私有方法 `referServices()`。但是，这个方法其实啥也没做。
+
+上面提到，`ReferenceBean` 实现了 `FactoryBean` 接口，那么直接在 `org.apache.dubbo.config.spring.ReferenceBean#getObject` 方法上打断点。当调用 `applicationContext.getBean(XXX)` 时，就会触发断点，一路跟下去就会发现，现在 `org.apache.dubbo.config.ReferenceConfig#init` 方法中完成各种初始化准备工作，然后调用 `org.apache.dubbo.config.ReferenceConfig#createProxy` 方法创建代理。而实际代理的创建工作是由 `org.apache.dubbo.rpc.proxy.AbstractProxyFactory#getProxy(Invoker<T>, boolean)` 方法创建的。这样说，也不算准确。因为 `AbstractProxyFactory` 对象是一个子类对象，子类是通过 Dubbo 的类 SPI 加载机制来动态选择创建的。
+
+其实，Dubbo 服务消费者实例只是一个代理，通过代理封装统一的网络请求，实现 RPC 的调用过程。
+
+== Dubbo 注解集成简述
+
+使用 Dubbo 注解集成的入口是 `org.apache.dubbo.config.spring.context.annotation.EnableDubbo`，直接上代码：
+
+
+.`org.apache.dubbo.config.spring.context.annotation.EnableDubbo`
+[{java_src_attr}]
+----
+
+/**
+ * Enables Dubbo components as Spring Beans, equals
+ * {@link DubboComponentScan} and {@link EnableDubboConfig} combination.
+ * <p>
+ * Note : {@link EnableDubbo} must base on Spring Framework 4.2 and above
+ *
+ * @see DubboComponentScan
+ * @see EnableDubboConfig
+ * @since 2.5.8
+ */
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Documented
+@EnableDubboConfig
+@DubboComponentScan
+public @interface EnableDubbo {
+
+    /**
+     * Base packages to scan for annotated @Service classes.
+     * <p>
+     * Use {@link #scanBasePackageClasses()} for a type-safe alternative to String-based
+     * package names.
+     *
+     * @return the base packages to scan
+     * @see DubboComponentScan#basePackages()
+     */
+    @AliasFor(annotation = DubboComponentScan.class, attribute = "basePackages")
+    String[] scanBasePackages() default {};
+
+    /**
+     * Type-safe alternative to {@link #scanBasePackages()} for specifying the packages to
+     * scan for annotated @Service classes. The package of each class specified will be
+     * scanned.
+     *
+     * @return classes from the base packages to scan
+     * @see DubboComponentScan#basePackageClasses
+     */
+    @AliasFor(annotation = DubboComponentScan.class, attribute = "basePackageClasses")
+    Class<?>[] scanBasePackageClasses() default {};
+
+
+    /**
+     * It indicates whether {@link AbstractConfig} binding to multiple Spring Beans.
+     *
+     * @return the default value is <code>true</code>
+     * @see EnableDubboConfig#multiple()
+     */
+    @AliasFor(annotation = EnableDubboConfig.class, attribute = "multiple")
+    boolean multipleConfig() default true;
+
+}
+----
+
+这个注解非常重要。一共有两点需要注意。这个方法就是注解的三个属性，分别给出了三个最重要的参数：
+
+. `scanBasePackages` -- 定义了基础扫描的包。通过 `@AliasFor` 注解表明，这是定义 `@DubboComponentScan` 注解的 `basePackages` 属性。
+. `scanBasePackageClasses` -- 定义扫描的基础类。通过 `@AliasFor` 注解表明，这是定义 `@DubboComponentScan` 注解的 `basePackageClasses` 属性。
+. `multipleConfig` -- 可以将 `AbstractConfig`(上一篇文章 https://www.diguage.com/post/spring-extensions-and-dubbo-1/[Spring 扩展点实践：整合 Apache Dubbo（一）] 已经做过说明) 向 Spring 中多次注册。换句话说，你可以配置多个注册中心，配置多个监控中心等等。通过 `@AliasFor` 注解表明，这是定义 `@EnableDubboConfig` 注解的 `multiple` 属性，默认为 `true`。
+
+接下来，让我们看看非常重要的两点内容。
+
+=== `@EnableDubboConfig`
+
+`@EnableDubbo` 注解上面加了 `@EnableDubboConfig` 注解，我们来看一下它的源码：
+
+.`org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig`
+[{java_src_attr}]
+----
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Documented
+@Import(DubboConfigConfigurationRegistrar.class)
+public @interface EnableDubboConfig {
+
+    /**
+     * It indicates whether binding to multiple Spring Beans.
+     *
+     * @return the default value is <code>true</code>
+     * @revised 2.5.9
+     */
+    boolean multiple() default true;
+
+}
+----
+
+这里，我们看到了熟悉的 `@Import`。 `DubboConfigConfigurationRegistrar` 从名字就能看出应该是实现了 `ImportBeanDefinitionRegistrar` 接口的，打开代码，果然如此。更
+
+在 https://www.diguage.com/post/spring-extensions-overview/[Spring 扩展点概览及实践] 和 https://www.diguage.com/post/spring-extensions-and-mybatis/[Spring 扩展点实践：整合 MyBATIS] 中有针对 `@Import` 和 `ImportBeanDefinitionRegistrar` 的详细介绍。尤其是 MyBATIS 就是使用 `ImportBeanDefinitionRegistrar` 来做扩展的。不懂的，请移步。
+
+关于 `DubboConfigConfigurationRegistrar` 的功能，这里做个简要总结：
+
+. 使用 `@EnableConfigurationBeanBindings` 注解，将配置项和对一个的 Bean 类型做一个绑定。如果 `multiple` 属性为 `true`，则指出多次注册。
+. 调用 `org.apache.dubbo.config.spring.util.DubboBeanUtils#registerCommonBeans` 方法，将公共的 Bean 注册到 Spring 中。这部分内容在 https://www.diguage.com/post/spring-extensions-and-dubbo-1/#register-common-beans[Spring 扩展点实践：整合 Apache Dubbo（一）：registerCommonBeans] 中已经给出了详细介绍，就不再赘述。
+
+=== `@DubboComponentScan`
+
+`@EnableDubbo` 注解上面加了 `@DubboComponentScan` 注解，直接上代码：
+
+
+.`org.apache.dubbo.config.spring.context.annotation.DubboComponentScan`
+[{java_src_attr}]
+----
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Import(DubboComponentScanRegistrar.class)
+public @interface DubboComponentScan {
+
+    /**
+     * Alias for the {@link #basePackages()} attribute. Allows for more concise annotation
+     * declarations e.g.: {@code @DubboComponentScan("org.my.pkg")} instead of
+     * {@code @DubboComponentScan(basePackages="org.my.pkg")}.
+     *
+     * @return the base packages to scan
+     */
+    String[] value() default {};
+
+    /**
+     * Base packages to scan for annotated @Service classes. {@link #value()} is an
+     * alias for (and mutually exclusive with) this attribute.
+     * <p>
+     * Use {@link #basePackageClasses()} for a type-safe alternative to String-based
+     * package names.
+     *
+     * @return the base packages to scan
+     */
+    String[] basePackages() default {};
+
+    /**
+     * Type-safe alternative to {@link #basePackages()} for specifying the packages to
+     * scan for annotated @Service classes. The package of each class specified will be
+     * scanned.
+     *
+     * @return classes from the base packages to scan
+     */
+    Class<?>[] basePackageClasses() default {};
+
+}
+----
+
+又双叒叕看到了 `@Import`；又双叒叕看到了 `Registrar`，只是这次名字叫 `DubboComponentScanRegistrar`。跟上面的一样，不再赘述。
+
+这里总结一下 `DubboComponentScanRegistrar` 的功能：注册了一个类为 `ServiceAnnotationBeanPostProcessor` 的 `BeanDefinition`，将配置项的配置信息传递给这个 `BeanDefinition` 实例。 `ServiceAnnotationBeanPostProcessor` 实现了 `BeanDefinitionRegistryPostProcessor` 接口，会在 Spring 的启动过程中，通过调用 `postProcessBeanDefinitionRegistry` 方法来注册相关的 `BeanDefinition`。关于这部分内容，请移步： https://www.diguage.com/post/spring-aop-process-overview/[Spring AOP 处理流程概述]。
+
+在 Spring 启动过程中，就会调用 `ServiceAnnotationBeanPostProcessor` 的 `postProcessBeanDefinitionRegistry` 方法，在这个方法中，通过创建 `DubboClassPathBeanDefinitionScanner` (继承了 `ClassPathBeanDefinitionScanner` 类)实例，调用 `scanner.scan(packageToScan)` 来注册 `BeanDefinition`。另外，有一点需要指出的是： `ServiceAnnotationBeanPostProcessor` 目前是 `@Deprecated`，后续推荐使用 `ServiceClassPostProcessor`，而 `ServiceAnnotationBeanPostProcessor` 就是 `ServiceClassPostProcessor` 的子类。所以，目前处理逻辑都集中在了 `ServiceClassPostProcessor` 中。
+
+关于 Apache Dubbo 与 Spring 的整合原理就全部介绍完毕了。如有什么问题，欢迎留言讨论。以后有时间，写写分布式事务解决方案 Seata 的一些原理。
+
+
+// == Apache Dubbo Consumer Service Bean 的创建
+
+// . `ReferenceAnnotationBeanPostProcessor`
+
+
+// [source,java,{source_attr}]
+// ----
+// 这是啥？
+// ----
+
+// image::/images/spring-framework/dubbo-logo.jpg[{image_attr}]
+
+
+
+// . `org.apache.dubbo.config.spring.context.annotation.EnableDubbo`
+
+// . `org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig`
+// . `org.apache.dubbo.config.spring.context.annotation.DubboConfigConfigurationRegistrar`
+
+
+// . `org.apache.dubbo.config.spring.context.annotation.DubboComponentScan`
+// . `org.apache.dubbo.config.spring.context.annotation.DubboComponentScanRegistrar`
+
+
+// . `org.apache.dubbo.config.spring.beans.factory.config.DubboConfigDefaultPropertyValueBeanPostProcessor`
+// . `org.apache.dubbo.config.spring.beans.factory.annotation.ReferenceAnnotationBeanPostProcessor`
+// . `org.apache.dubbo.xml.rpc.protocol.xmlrpc.XmlRpcProxyFactoryBean`
+
+// . `org.apache.dubbo.config.spring.beans.factory.annotation.ServiceAnnotationBeanPostProcessor` -- 弃用，推荐 `ServiceClassPostProcessor`。
+// . `org.apache.dubbo.config.spring.beans.factory.annotation.ServiceClassPostProcessor`
+
+// . `org.apache.dubbo.config.spring.schema.DubboBeanDefinitionParser`
+
+// . `org.apache.dubbo.config.spring.beans.factory.annotation.DubboConfigAliasPostProcessor`
+
+
+// === Seata 与 Spring 整合
+
+// . `io.seata.config.springcloud.EnableSeataSpringConfig`
+// . `io.seata.config.springcloud.SpringApplicationContextProviderRegistrar`
+// . `HttpAutoConfiguration`
+// . `RequiredAnnotationBeanPostProcessor`
+// . `SpringCacheAnnotationParser`

@@ -1,0 +1,44 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **Spring Web 初始化流程**
+
+actor Actor
+participant DispatcherServlet << (C,#ADD1B2) >>
+participant FrameworkServlet << (A,#AADCDF) >>
+
+Actor -> DispatcherServlet: ""init""\n初始化
+note right: 该 ""init"" 方法是从 ""HttpServletBean"" 继承的\n读取 """"
+activate DispatcherServlet
+
+    DispatcherServlet -> FrameworkServlet: ""initServletBean""
+    activate FrameworkServlet
+
+        FrameworkServlet -> FrameworkServlet: ""initWebApplicationContext""\n初始化 Spring 容器\n先获取父容器，再初始化 Web 容器
+        activate FrameworkServlet
+
+            FrameworkServlet -> DispatcherServlet: ""onRefresh""\n初始化 Spring Web
+            activate DispatcherServlet
+
+                |||
+
+                DispatcherServlet -> DispatcherServlet: ""initStrategies""\n初始化 Spring Web 的九大组件
+                activate DispatcherServlet
+                |||
+                DispatcherServlet -> DispatcherServlet
+                deactivate DispatcherServlet
+
+            FrameworkServlet <- DispatcherServlet
+            deactivate DispatcherServlet
+
+        FrameworkServlet -> FrameworkServlet
+        deactivate FrameworkServlet
+
+    DispatcherServlet <- FrameworkServlet
+    deactivate FrameworkServlet
+
+Actor <- DispatcherServlet: 完成初始化
+deactivate DispatcherServlet
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

@@ -1,0 +1,42 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **""AutowiredAnnotationBeanPostProcessor"" 继承体系**
+
+interface BeanPostProcessor {
+	+ Object postProcessBeforeInitialization(Object bean, String beanName)
+	+ Object postProcessAfterInitialization(Object bean, String beanName)
+}
+
+interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
+    + Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName)
+    + boolean postProcessAfterInstantiation(Object bean, String beanName)
+    + PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName)
+}
+
+interface MergedBeanDefinitionPostProcessor extends BeanPostProcessor {
+    + void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName)
+    + void resetBeanDefinition(String beanName)
+}
+
+interface SmartInstantiationAwareBeanPostProcessor extends InstantiationAwareBeanPostProcessor {
+	+ Class<?> predictBeanType(Class<?> beanClass, String beanName)
+	+ Class<?> determineBeanType(Class<?> beanClass, String beanName)
+	+ Constructor<?>[] determineCandidateConstructors(Class<?> beanClass, String beanName)
+	+ Object getEarlyBeanReference(Object bean, String beanName)
+}
+
+interface BeanRegistrationAotProcessor {
+	+ BeanRegistrationAotContribution processAheadOfTime(RegisteredBean registeredBean)
+	+ boolean isBeanExcludedFromAotProcessing()
+}
+note bottom of BeanRegistrationAotProcessor: Spring 6 为了 AOT 新加的。
+
+class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationAwareBeanPostProcessor, MergedBeanDefinitionPostProcessor, BeanRegistrationAotProcessor {
+    - Set<Class<? extends Annotation>> autowiredAnnotationTypes
+    - Map<String, InjectionMetadata> injectionMetadataCache
+}
+note bottom of AutowiredAnnotationBeanPostProcessor: 从此图可以看出， ""AutowiredAnnotationBeanPostProcessor"" 是一个 ""BeanPostProcessor""。\n由此可知， ""AutowiredAnnotationBeanPostProcessor"" 是在 Spring Bean 初始化时，发挥作用。
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

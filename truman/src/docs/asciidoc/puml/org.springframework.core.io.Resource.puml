@@ -1,0 +1,78 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **Resource 继承体系**
+
+
+interface InputStreamSource
+interface Resource
+abstract class AbstractResource
+interface WritableResource
+class InputStreamResource
+class DescriptiveResource
+class ByteArrayResource
+abstract class AbstractFileResolvingResource
+class FileSystemResource
+class PathResource
+class UrlResource
+interface ContextResource
+class ClassPathResource
+class FileSystemContextResource
+class ClassRelativeContextResource
+class ClassPathContextResource
+class VfsResource
+
+class EncodedResource
+
+class BeanDefinitionResource
+
+class TransformedResource
+
+class ServletContextResource
+
+class PortletContextResource
+
+
+InputStreamSource <|-- Resource
+InputStreamSource <|.. EncodedResource
+
+Resource <|.. AbstractResource
+
+Resource <|-- WritableResource
+AbstractResource <|-right- InputStreamResource
+AbstractResource <|-- VfsResource
+AbstractResource <|-- DescriptiveResource
+AbstractResource <|-- ByteArrayResource
+AbstractResource <|-- AbstractFileResolvingResource
+AbstractResource <|-left- BeanDefinitionResource
+
+WritableResource <|.. FileSystemResource
+AbstractResource <|-- FileSystemResource
+
+WritableResource <|.. PathResource
+AbstractResource <|-- PathResource
+
+ByteArrayResource <|-- TransformedResource
+
+AbstractFileResolvingResource <|-- UrlResource
+Resource <|-- ContextResource
+AbstractFileResolvingResource <|-- ClassPathResource
+
+ContextResource <|.. FileSystemContextResource
+FileSystemResource <|-- FileSystemContextResource
+
+ContextResource <|.. ServletContextResourceLoader
+AbstractFileResolvingResource <|-- ServletContextResource
+
+ContextResource <|.. PortletContextResource
+AbstractFileResolvingResource <|-- PortletContextResource
+
+ContextResource <|.. ClassRelativeContextResource
+ClassPathResource <|-- ClassRelativeContextResource
+
+ContextResource <|.. ClassPathContextResource
+ClassPathResource <|-- ClassPathContextResource
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

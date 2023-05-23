@@ -1,0 +1,8 @@
+[#orm]
+= Spring 整合 ORM 框架
+
+include::{includedir}/hibernate.adoc[leveloffset=+1]
+
+include::{includedir}/jpa.adoc[leveloffset=+1]
+
+include::{includedir}/extensions-and-mybatis.adoc[leveloffset=+1]

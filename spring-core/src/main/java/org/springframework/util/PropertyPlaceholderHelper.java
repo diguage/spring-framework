@@ -95,6 +95,7 @@ public class PropertyPlaceholderHelper {
 		Assert.notNull(value, "'value' must not be null");
 		return this.parser.replacePlaceholders(value, placeholderResolver);
 	}
+	// end::parseStringValue[]
 
 
 	/**

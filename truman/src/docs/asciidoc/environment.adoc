@@ -1,0 +1,5 @@
+= `Environment`
+
+`Environment` 主要用于读取当前应用运行环境的环境变量和一些配置信息。另外，常见的指定不同配置的 `spring.profiles.active` 的处理，也是由 `Environment` 来处理。
+
+plantuml::{includedir}/puml/org.springframework.core.env.PropertyResolver.puml[{diagram_attr}]

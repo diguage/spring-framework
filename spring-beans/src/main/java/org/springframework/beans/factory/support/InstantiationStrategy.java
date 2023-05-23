@@ -25,6 +25,12 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 
 /**
+ * 实例化策略，一共有两种策略
+ * <ol>
+ *     <li>SimpleInstantiationStrategy -- 简单模式，可以通过反射来实例化对象实例</li>
+ *     <li>CglibSubclassingInstantiationStrategy -- CGLIB 模式，继承了 SimpleInstantiationStrategy 的以反射方式实例化对象，通过字节码动态生成某个类的子类。</li>
+ * </ol>
+ *
  * Interface responsible for creating instances corresponding to a root bean definition.
  *
  * <p>This is pulled out into a strategy as various approaches are possible,

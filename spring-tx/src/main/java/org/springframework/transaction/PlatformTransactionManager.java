@@ -47,6 +47,9 @@ import org.jspecify.annotations.Nullable;
 public interface PlatformTransactionManager extends TransactionManager {
 
 	/**
+	 * 返回当前活动的事务或创建一个新的事务。
+	 * 参数definition描述了事务的属性，比如传播行为，隔离级别，超时等
+	 *
 	 * Return a currently active transaction or create a new one, according to
 	 * the specified propagation behavior.
 	 * <p>Note that parameters like isolation level or timeout will only be applied
@@ -72,6 +75,8 @@ public interface PlatformTransactionManager extends TransactionManager {
 	TransactionStatus getTransaction(@Nullable TransactionDefinition definition) throws TransactionException;
 
 	/**
+	 * 根据给定事务的状态提交给定事务
+	 *
 	 * Commit the given transaction, with regard to its status. If the transaction
 	 * has been marked rollback-only programmatically, perform a rollback.
 	 * <p>If the transaction wasn't a new one, omit the commit for proper
@@ -98,6 +103,8 @@ public interface PlatformTransactionManager extends TransactionManager {
 	void commit(TransactionStatus status) throws TransactionException;
 
 	/**
+	 * 执行给定事务的回滚
+	 *
 	 * Perform a rollback of the given transaction.
 	 * <p>If the transaction wasn't a new one, just set it rollback-only for proper
 	 * participation in the surrounding transaction. If a previous transaction

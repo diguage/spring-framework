@@ -199,6 +199,7 @@ public abstract class DataSourceUtils {
 
 		boolean debugEnabled = logger.isDebugEnabled();
 		// Set read-only flag.
+		// 设置数据库连接的只读标识
 		if (setReadOnly) {
 			if (debugEnabled) {
 				logger.debug("Setting JDBC Connection [" + con + "] read-only");
@@ -207,6 +208,7 @@ public abstract class DataSourceUtils {
 		}
 
 		// Apply specific isolation level, if any.
+		// 设置数据库连接的隔离级别
 		Integer previousIsolationLevel = null;
 		if (isolationLevel != TransactionDefinition.ISOLATION_DEFAULT) {
 			if (debugEnabled) {
@@ -356,6 +358,8 @@ public abstract class DataSourceUtils {
 	 * @throws SQLException if thrown by JDBC methods
 	 * @see java.sql.Statement#setQueryTimeout
 	 */
+	// 将超时时间转换为 JDBC 的 Statement 的 queryTimeout。
+	// 因此，Spring事务的超时时间也就是通过Statement的超时来实现。
 	public static void applyTimeout(Statement stmt, @Nullable DataSource dataSource, int timeout) throws SQLException {
 		Assert.notNull(stmt, "No Statement specified");
 		ConnectionHolder holder = null;

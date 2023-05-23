@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:contont="http://www.springframework.org/schema/context"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+	                       http://www.springframework.org/schema/beans/spring-beans.xsd
+	                       http://www.springframework.org/schema/context
+	                       https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<contont:component-scan base-package="com.diguage.truman.beans.env"/>
+
+	<!-- <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">-->
+	<!-- 	<property name="locations">-->
+	<!-- 		<list>-->
+	<!-- 			<value>classpath:com/diguage/truman/beans/env/PropertyPlaceholderConfigurerTest.properties</value>-->
+	<!-- 		</list>-->
+	<!-- 	</property>-->
+	<!-- </bean>-->
+	<!-- <bean class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">-->
+	<!-- 	<property name="locations">-->
+	<!-- 		<list>-->
+	<!-- 			<value>classpath:com/diguage/truman/beans/env/PropertyPlaceholderConfigurerTest.properties</value>-->
+	<!-- 		</list>-->
+	<!-- 	</property>-->
+	<!-- </bean>-->
+
+	<bean class="com.diguage.truman.beans.env.PropertyPlaceholderConfigurerTest.CfgOption">
+		<!-- 把 cmdCfg 通过 -D 来设置 -->
+		<property name="cmdCfg" value="${cmdCfg}"/>
+		<!-- 在 Properties 文件中配置 -->
+		<property name="fileCfg" value="${fileCfg}"/>
+		<!-- 读取系统环境变量 -->
+		<property name="envCfg" value="${JAVA_HOME}"/>
+	</bean>
+</beans>

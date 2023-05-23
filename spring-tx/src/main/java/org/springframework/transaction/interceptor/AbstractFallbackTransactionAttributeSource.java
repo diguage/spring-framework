@@ -120,6 +120,8 @@ public abstract class AbstractFallbackTransactionAttributeSource
 			return (cached != NULL_TRANSACTION_ATTRIBUTE ? cached : null);
 		}
 		else {
+			// We need to work it out.
+			// 获取并解析 @Transactional 注解
 			TransactionAttribute txAttr = computeTransactionAttribute(method, targetClass);
 			if (txAttr != null) {
 				String methodIdentification = ClassUtils.getQualifiedMethodName(method, targetClass);
@@ -152,6 +154,8 @@ public abstract class AbstractFallbackTransactionAttributeSource
 	}
 
 	/**
+	 * 从方法、类、接口中获取 @Transactional 事务注解声明
+	 *
 	 * Same signature as {@link #getTransactionAttribute}, but doesn't cache the result.
 	 * {@link #getTransactionAttribute} is effectively a caching decorator for this method.
 	 * <p>As of 4.1.8, this method can be overridden.
@@ -170,27 +174,34 @@ public abstract class AbstractFallbackTransactionAttributeSource
 
 		// The method may be on an interface, but we need attributes from the target class.
 		// If the target class is null, the method will be unchanged.
+		// method 表示接口中的方法
+		// specificMethod 代表实现类中的方法
 		Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
 
 		// First try is the method in the target class.
+		// 查看方法中是否存在 @Transactional 事务注解声明
 		TransactionAttribute txAttr = findTransactionAttribute(specificMethod);
 		if (txAttr != null) {
 			return txAttr;
 		}
 
 		// Second try is the transaction attribute on the target class.
+		// 查看方法所在的类中是否存在 @Transactional 事务注解声明
 		txAttr = findTransactionAttribute(specificMethod.getDeclaringClass());
 		if (txAttr != null && ClassUtils.isUserLevelMethod(method)) {
 			return txAttr;
 		}
 
+		// 如果存在接口，则到接口中去寻找
 		if (specificMethod != method) {
 			// Fallback is to look at the original method.
+			// 查找接口的方法中的注解声明
 			txAttr = findTransactionAttribute(method);
 			if (txAttr != null) {
 				return txAttr;
 			}
 			// Last fallback is the class of the original method.
+			// 查找接口的注解声明
 			txAttr = findTransactionAttribute(method.getDeclaringClass());
 			if (txAttr != null && ClassUtils.isUserLevelMethod(method)) {
 				return txAttr;

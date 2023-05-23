@@ -30,6 +30,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.util.CollectionUtils;
 
 /**
+ * HandlerExecutionChain 只能通过 HandlerMapping 中的 getHandler 获取到
+ *
  * Handler execution chain, consisting of handler object and any handler interceptors.
  * Returned by HandlerMapping's {@link HandlerMapping#getHandler} method.
  *

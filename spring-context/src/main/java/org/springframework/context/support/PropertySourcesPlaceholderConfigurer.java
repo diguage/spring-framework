@@ -19,6 +19,8 @@ package org.springframework.context.support;
 import java.io.IOException;
 import java.util.Properties;
 
+import com.diguage.labs.Printers;
+
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
@@ -128,6 +130,11 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 	 */
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		Printers.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		if (this.propertySources == null) {
 			this.propertySources = new MutablePropertySources();
 			if (this.environment != null) {
@@ -135,9 +142,11 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 						(this.environment instanceof ConfigurableEnvironment configurableEnvironment ?
 							new ConfigurableEnvironmentPropertySource(configurableEnvironment) :
 							new FallbackEnvironmentPropertySource(this.environment));
+				// 1、先把环境变量中的信息加入到来属性源列表中
 				this.propertySources.addLast(environmentPropertySource);
 			}
 			try {
+				// 2、将配置的多个属性文件合并到一个 PropertySource 对象中，再添加到属性来源列表中
 				PropertySource<?> localPropertySource =
 						new PropertiesPropertySource(LOCAL_PROPERTIES_PROPERTY_SOURCE_NAME, mergeProperties());
 				if (this.localOverride) {
@@ -152,6 +161,7 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 			}
 		}
 
+		// 3、处理属性配置
 		processProperties(beanFactory, createPropertyResolver(this.propertySources));
 		this.appliedPropertySources = this.propertySources;
 	}
@@ -173,11 +183,15 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 	protected void processProperties(ConfigurableListableBeanFactory beanFactoryToProcess,
 			ConfigurablePropertyResolver propertyResolver) throws BeansException {
 
+		// 设置占位符前缀，默认是 ${
 		propertyResolver.setPlaceholderPrefix(this.placeholderPrefix);
+		// 设置占位符后缀，默认是 }
 		propertyResolver.setPlaceholderSuffix(this.placeholderSuffix);
+		// 设置占位符默认值分割符，默认是:
 		propertyResolver.setValueSeparator(this.valueSeparator);
 		propertyResolver.setEscapeCharacter(this.escapeCharacter);
 
+		// 构建字符串解析器，底层还是使用上面传过来的 PropertySourcesPropertyResolver 对象
 		StringValueResolver valueResolver = strVal -> {
 			String resolved = (this.ignoreUnresolvablePlaceholders ?
 					propertyResolver.resolvePlaceholders(strVal) :
@@ -188,6 +202,7 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 			return (resolved.equals(this.nullValue) ? null : resolved);
 		};
 
+		// 真正执行处理属性解析
 		doProcessProperties(beanFactoryToProcess, valueResolver);
 	}
 

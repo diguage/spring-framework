@@ -1,0 +1,16 @@
+[#annotations-resolve]
+= 注解解析
+
+说明一下常用的注解的处理过程：
+
+. `@Component`
+. `@Service`
+. `@Repository`
+. `@Controller`
+. `@Autowired`
+. `@Resource`
+. `@Value`
+. `@Qualifier`
+. `@Required`
+
+考虑把 `@Controller` 放在 <<mvc>> 再做说明。

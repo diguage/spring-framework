@@ -1,0 +1,11 @@
+= 数据访问
+
+
+plantuml::{includedir}/puml/org.springframework.dao.DataAccessException.puml[{diagram_attr}]
+
+
+include::{includedir}/jdbc.adoc[leveloffset=+1]
+
+include::{includedir}/orm.adoc[leveloffset=+1]
+
+include::{includedir}/transaction.adoc[leveloffset=+1]

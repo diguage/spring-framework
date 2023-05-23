@@ -1,0 +1,64 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **BeanFactory.getBean Bean 创建**
+
+interface BeanPostProcessor {
+
+	+ Object postProcessBeforeInitialization(Object bean, String beanName);
+
+	+ Object postProcessAfterInitialization(Object bean, String beanName);
+}
+
+
+class ServletContextAwareProcessor implements BeanPostProcessor
+
+interface DestructionAwareBeanPostProcessor extends BeanPostProcessor
+
+class ScheduledAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor, DestructionAwareBeanPostProcessor
+
+class SimpleServletPostProcessor implements DestructionAwareBeanPostProcessor
+
+class InitDestroyAnnotationBeanPostProcessor implements DestructionAwareBeanPostProcessor, MergedBeanDefinitionPostProcessor, BeanRegistrationAotProcessor
+
+class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBeanPostProcessor implements InstantiationAwareBeanPostProcessor
+
+class ApplicationListenerDetector implements DestructionAwareBeanPostProcessor, MergedBeanDefinitionPostProcessor
+
+
+
+
+interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor
+
+
+class ApplicationContextAwareProcessor implements BeanPostProcessor
+
+class AdvisorAdapterRegistrationManager implements BeanPostProcessor
+
+class ImportAwareAotBeanPostProcessor implements BeanPostProcessor
+
+interface MergedBeanDefinitionPostProcessor extends BeanPostProcessor
+
+
+'interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor
+'
+'interface SmartInstantiationAwareBeanPostProcessor extends InstantiationAwareBeanPostProcessor
+'
+'class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBeanPostProcessor implements InstantiationAwareBeanPostProcessor, BeanFactoryAware, Serializable
+'
+'abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor
+'
+'abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware
+'
+'abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyCreator
+'
+'class ServletContextAwareProcessor implements BeanPostProcessor
+'
+'interface DestructionAwareBeanPostProcessor extends BeanPostProcessor
+'
+'class BeanValidationPostProcessor implements BeanPostProcessor, InitializingBean
+'
+'class AdvisorAdapterRegistrationManager implements BeanPostProcessor
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

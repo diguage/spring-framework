@@ -20,6 +20,8 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 
+import com.diguage.labs.Printers;
+
 import org.aspectj.weaver.loadtime.ClassPreProcessorAgentAdapter;
 import org.jspecify.annotations.Nullable;
 
@@ -72,6 +74,11 @@ public class AspectJWeavingEnabler
 
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		Printers.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		enableAspectJWeaving(this.loadTimeWeaver, this.beanClassLoader);
 	}
 

@@ -1,0 +1,29 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **ClassFilter 继承体系**
+
+interface ClassFilter {
+    + TRUE: ClassFilter
+    + matches(Class<?> clazz): boolean
+}
+
+class DefaultIntroductionAdvisor
+DefaultIntroductionAdvisor .right.|> ClassFilter
+
+class AspectJExpressionPointcut
+AspectJExpressionPointcut .left.|> ClassFilter
+
+class AnnotationClassFilter implements ClassFilter
+
+class ControlFlowPointcut implements ClassFilter
+
+class TypePatternClassFilter implements ClassFilter
+
+class RootClassFilter implements ClassFilter
+
+class TrueClassFilter implements ClassFilter
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

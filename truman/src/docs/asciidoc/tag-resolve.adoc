@@ -1,0 +1,23 @@
+[#tag-resolve]
+= 标签解析
+
+`<bean>` 的子标签 `<property>` 会根据属性不同，被解析成不同的对象，例如 `TypedStringValue`、 `RuntimeBeanReference`，然后再被封装成 `PropertyValue` 对象，最后被存放在 `GenericBeanDefinition` 对象的 `MutablePropertyValues propertyValues` 属性（在 `AbstractBeanDefinition` 中声明）中。在首次获取对象时，根据这里的信息再逐步转化成不同对象。
+
+这里还有一点需求说明：
+
+* `GenericBeanDefinition` 对象对应 XML 等原始配置文件中对 Bean 的定义和配置。
+* `RootBeanDefinition` 则代表生成实例时， Bean 对应的定义和配置。是根据 `GenericBeanDefinition` 的配置来生成的。如果 `GenericBeanDefinition` 定义的是子 Bean 的话，则会同时合并父类的相关属性。_这个合并怎么实现的？_
+* `BeanWrapperImpl` 对象是对创建后的实例对象的包装，被存储在
+
+
+
+
+* 对象之间的依赖关系存放在  `org.springframework.beans.factory.support.DefaultSingletonBeanRegistry#dependentBeanMap` （ `Map<String, Set<String>>`，bean name --> Set of dependent bean names） 中。 而 `AbstractBeanFactory`  通过继承 `FactoryBeanRegistrySupport`, 而 `FactoryBeanRegistrySupport` 继承了 `DefaultSingletonBeanRegistry`，进而获得了对这个关系的访问。
+* `org.springframework.beans.factory.support.DefaultSingletonBeanRegistry` 中 `dependentBeanMap` 和 `dependenciesForBeanMap` 是什么关系？
+** 例如 A ref B， A ref C，就是 类 A 中有属性 B 和 C。
+** 在 `dependenciesForBeanMap` 存到就是 A -> (B, C)；
+** 而 `dependentBeanMap` 中存的是 B -> A 和 C -> A。这个还要进一步确认。
+
+疑问：
+
+* `org.springframework.beans.factory.support.ConstructorResolver#autowireConstructor` 中 `this.beanFactory.initBeanWrapper(bw)`，为什么把对 `BeanWrapper` 对初始化封装在 `BeanFactory` 而不是 `BeanWrapper` 内部？

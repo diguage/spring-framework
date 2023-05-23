@@ -1,0 +1,18 @@
+= `ApplicationContext`
+
+总使用 `AnnotationConfigApplicationContext` 做实验，有可能会遗漏一些重要的细节。增加一个 XML 的示例。
+
+.XmlApplicationContextTest
+[{java_src_attr}]
+----
+include::{truman_src_dir}/context/XmlApplicationContextTest.java[]
+----
+
+.XmlApplicationContextTest.xml
+[{xml_src_attr}]
+----
+include::{truman_resource_dir}/context/XmlApplicationContextTest.xml[]
+----
+
+
+plantuml::{includedir}/puml/org.springframework.context.ApplicationEvent.puml[{diagram_attr}]

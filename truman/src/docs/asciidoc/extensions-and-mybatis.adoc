@@ -1,0 +1,513 @@
+[#mybatis]
+= 整合 MyBATIS
+
+Spring 与 MyBATIS 的整合并不是 Spring 实现的，而且由 MyBATIS 项目组提供的。通过这个整合，也可以学习一下如何提供整合自己的类型框架。
+
+在上一篇文章 https://www.diguage.com/post/spring-extensions-overview/[Spring 扩展点概览及实践^] 中介绍了 Spring 内部存在的扩展点。学以致用，现在来分析一下 Spring 与 MyBATIS 的整合流程。
+
+== 示例程序
+
+为了方便分析源码，先根据官方文档 https://mybatis.org/spring/getting-started.html[mybatis-spring – MyBatis-Spring | Getting Started^] 搭建起一个简单实例。
+
+数据库方面，直接使用功能了 MySQL 示例数据库： https://dev.mysql.com/doc/employee/en/[MySQL : Employees Sample Database^]，需要的话，自行下载。
+
+[#SpringMybatisTest]
+.SpringMybatisTest
+[{java_src_attr}]
+----
+include::{truman_src_dir}/mybatis/SpringMybatisTest.java[]
+----
+
+[#EmployeesMapper]
+.EmployeesMapper
+[{java_src_attr}]
+----
+include::{truman_src_dir}/mybatis/EmployeesMapper.java[]
+----
+
+[#MapperAop]
+.EmployeesMapper
+[{java_src_attr}]
+----
+include::{truman_src_dir}/mybatis/MapperAop.java[]
+----
+
+[#Employees]
+.Employees
+[{java_src_attr}]
+----
+include::{truman_src_dir}/mybatis/Employees.java[]
+----
+
+整个实例代码中，只有 `@MapperScan(basePackages = "com.diguage.truman.mybatis")` 这个注解和 MyBATIS 的配置相关，我们就从这里开始吧。
+
+[#mapper-scan]
+== `@MapperScan` 处理
+
+D瓜哥在 https://www.diguage.com/post/spring-extensions-overview/#bean-definition-registry-post-processor[Spring 扩展点概览及实践：BeanDefinitionRegistryPostProcessor^] 中已经指出 `ConfigurationClassPostProcessor` 负责处理 `@Configuration` 注解。所以，可以直接去看这个类的代码。
+
+`ConfigurationClassPostProcessor` 的处理流程都是在 `processConfigBeanDefinitions(BeanDefinitionRegistry registry)` 方法中完成的。在这个方法中，可以看到如下代码：
+
+
+.`ConfigurationClassPostProcessor#processConfigBeanDefinitions`
+[{java_src_attr},highlight=68..80]
+----
+include::{context_src_dir}/context/annotation/ConfigurationClassPostProcessor.java[tag=processConfigBeanDefinitions]
+----
+
+在 `parser.parse(candidates);` 这行代码打一个断点，然后一步一步跟下去，就到了 `ConfigurationClassParser` 的 `doProcessConfigurationClass` 方法里，重点关注 `processImports` 这行：
+
+.`ConfigurationClassParser#doProcessConfigurationClass`
+[{java_src_attr},highlight=53..56]
+----
+include::{context_src_dir}/context/annotation/ConfigurationClassParser.java[tag=doProcessConfigurationClass]
+----
+
+请注意这里的 `getImports(sourceClass)`，我们看一下这个方法：
+
+[{java_src_attr}]
+----
+include::{context_src_dir}/context/annotation/ConfigurationClassParser.java[tag=getImports]
+
+include::{context_src_dir}/context/annotation/ConfigurationClassParser.java[tag=collectImports]
+----
+
+在 `String annName = annotation.getMetadata().getClassName();` 这行代码打断点，然后调试，注意观察 `annName` 变量的值，相信肯定可以看到 `org.mybatis.spring.annotation.MapperScan`，接着就可以看到，通过 `sourceClass.getAnnotationAttributes(Import.class.getName(), "value")` 解析 `@Import` 注解，把其中的 `org.mybatis.spring.annotation.MapperScannerRegistrar` 的相关信息（被封装成了 `SourceClass` 对象）加入到了 `imports` 变量中。
+
+下面看一下是如何处理 `MapperScannerRegistrar` 的。
+
+== `MapperScannerRegistrar`
+
+我们接着看 `processImports` 方法：
+
+[{java_src_attr}]
+----
+  private void processImports(ConfigurationClass configClass, SourceClass currentSourceClass,
+    Collection<SourceClass> importCandidates, Predicate<String> exclusionFilter,
+    boolean checkForCircularImports) {
+
+      //...此处省去 N 行代码
+        else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
+                      // 很明显，会进入到这个分支
+          // Candidate class is an ImportBeanDefinitionRegistrar ->
+          // delegate to it to register additional bean definitions
+          Class<?> candidateClass = candidate.loadClass();
+          ImportBeanDefinitionRegistrar registrar =
+              ParserStrategyUtils.instantiateClass(candidateClass, ImportBeanDefinitionRegistrar.class,
+                  this.environment, this.resourceLoader, this.registry);
+                      // 创建一个实例，然后加入到 configClass 中
+          configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
+      //...此处省去 N 行代码
+  }
+----
+
+接着，回到 `processConfigBeanDefinitions` 方法：
+
+.`ConfigurationClassPostProcessor#processConfigBeanDefinitions`
+[{java_src_attr},highlight=79..91]
+----
+include::{context_src_dir}/context/annotation/ConfigurationClassPostProcessor.java[tag=processConfigBeanDefinitions]
+----
+
+进入 `this.reader.loadBeanDefinitions(configClasses);` 方法：
+
+.`ConfigurationClassBeanDefinitionReader#loadBeanDefinitions`
+[{java_src_attr}]
+----
+include::{context_src_dir}/context/annotation/ConfigurationClassBeanDefinitionReader.java[tag=loadBeanDefinitions]
+
+include::{context_src_dir}/context/annotation/ConfigurationClassBeanDefinitionReader.java[tag=loadBeanDefinitionsForConfigurationClass]
+
+include::{context_src_dir}/context/annotation/ConfigurationClassBeanDefinitionReader.java[tag=loadBeanDefinitionsFromImportedResources]
+
+include::{context_src_dir}/context/annotation/ConfigurationClassBeanDefinitionReader.java[tag=loadBeanDefinitionsFromRegistrars]
+----
+
+到这里就调用到了 `MapperScannerRegistrar` 的 `registerBeanDefinitions` 方法：
+
+.`MapperScannerRegistrar#registerBeanDefinitions(AnnotationMetadata, BeanDefinitionRegistry)`
+[{java_src_attr}]
+----
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+    AnnotationAttributes mapperScanAttrs = AnnotationAttributes
+        .fromMap(importingClassMetadata.getAnnotationAttributes(MapperScan.class.getName()));
+    if (mapperScanAttrs != null) {
+      registerBeanDefinitions(importingClassMetadata, mapperScanAttrs, registry,
+          generateBaseBeanName(importingClassMetadata, 0));
+    }
+  }
+
+  void registerBeanDefinitions(AnnotationMetadata annoMeta, AnnotationAttributes annoAttrs,
+      BeanDefinitionRegistry registry, String beanName) {
+
+    // 注意这行代码：
+    BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(MapperScannerConfigurer.class);
+    builder.addPropertyValue("processPropertyPlaceHolders", true);
+
+    Class<? extends Annotation> annotationClass = annoAttrs.getClass("annotationClass");
+    if (!Annotation.class.equals(annotationClass)) {
+      builder.addPropertyValue("annotationClass", annotationClass);
+    }
+
+    Class<?> markerInterface = annoAttrs.getClass("markerInterface");
+    if (!Class.class.equals(markerInterface)) {
+      builder.addPropertyValue("markerInterface", markerInterface);
+    }
+
+    Class<? extends BeanNameGenerator> generatorClass = annoAttrs.getClass("nameGenerator");
+    if (!BeanNameGenerator.class.equals(generatorClass)) {
+      builder.addPropertyValue("nameGenerator", BeanUtils.instantiateClass(generatorClass));
+    }
+
+    Class<? extends MapperFactoryBean> mapperFactoryBeanClass = annoAttrs.getClass("factoryBean");
+    if (!MapperFactoryBean.class.equals(mapperFactoryBeanClass)) {
+      builder.addPropertyValue("mapperFactoryBeanClass", mapperFactoryBeanClass);
+    }
+
+    String sqlSessionTemplateRef = annoAttrs.getString("sqlSessionTemplateRef");
+    if (StringUtils.hasText(sqlSessionTemplateRef)) {
+      builder.addPropertyValue("sqlSessionTemplateBeanName", annoAttrs.getString("sqlSessionTemplateRef"));
+    }
+
+    String sqlSessionFactoryRef = annoAttrs.getString("sqlSessionFactoryRef");
+    if (StringUtils.hasText(sqlSessionFactoryRef)) {
+      builder.addPropertyValue("sqlSessionFactoryBeanName", annoAttrs.getString("sqlSessionFactoryRef"));
+    }
+
+    List<String> basePackages = new ArrayList<>();
+    basePackages.addAll(
+        Arrays.stream(annoAttrs.getStringArray("value")).filter(StringUtils::hasText).collect(Collectors.toList()));
+
+    basePackages.addAll(Arrays.stream(annoAttrs.getStringArray("basePackages")).filter(StringUtils::hasText)
+        .collect(Collectors.toList()));
+
+    basePackages.addAll(Arrays.stream(annoAttrs.getClassArray("basePackageClasses")).map(ClassUtils::getPackageName)
+        .collect(Collectors.toList()));
+
+    if (basePackages.isEmpty()) {
+      basePackages.add(getDefaultBasePackage(annoMeta));
+    }
+
+    String lazyInitialization = annoAttrs.getString("lazyInitialization");
+    if (StringUtils.hasText(lazyInitialization)) {
+      builder.addPropertyValue("lazyInitialization", lazyInitialization);
+    }
+
+    builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(basePackages));
+
+    registry.registerBeanDefinition(beanName, builder.getBeanDefinition());
+
+  }
+----
+
+其实只干了一件事情，就是在想容器中注册了一个类为 `MapperScannerConfigurer` 的 `BeanDefinition`，在创建过程中，还把 `@MapperScan` 注解中的属性给添加到了 `BeanDefinition` 属性中。下面，来看看 `MapperScannerConfigurer` 是何方神圣。
+
+== `MapperScannerConfigurer`
+
+先看一下 `MapperScannerConfigurer` 的类型定义：
+
+[{java_src_attr}]
+----
+public class MapperScannerConfigurer
+    implements BeanDefinitionRegistryPostProcessor, InitializingBean, ApplicationContextAware, BeanNameAware {
+----
+
+结合上一篇文章 https://www.diguage.com/post/spring-extensions-overview/#bean-definition-registry-post-processor[Spring 扩展点概览及实践：BeanDefinitionRegistryPostProcessor^] 中的介绍，可以知道 `BeanDefinitionRegistryPostProcessor` 也是 Spring 生命周期中的一环，将其注册到容器中，就可以通过对 `postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry)` 来实现注册自定义 `BeanDefinition` 的功能。
+
+来看看 `postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry)` 的定义：
+
+.`MapperScannerConfigurer#postProcessBeanDefinitionRegistry`
+[{java_src_attr}]
+----
+  @Override
+  public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+    if (this.processPropertyPlaceHolders) {
+      processPropertyPlaceHolders();
+    }
+
+    ClassPathMapperScanner scanner = new ClassPathMapperScanner(registry);
+    scanner.setAddToConfig(this.addToConfig);
+    scanner.setAnnotationClass(this.annotationClass);
+    scanner.setMarkerInterface(this.markerInterface);
+    scanner.setSqlSessionFactory(this.sqlSessionFactory);
+    scanner.setSqlSessionTemplate(this.sqlSessionTemplate);
+    scanner.setSqlSessionFactoryBeanName(this.sqlSessionFactoryBeanName);
+    scanner.setSqlSessionTemplateBeanName(this.sqlSessionTemplateBeanName);
+    scanner.setResourceLoader(this.applicationContext);
+    scanner.setBeanNameGenerator(this.nameGenerator);
+    scanner.setMapperFactoryBeanClass(this.mapperFactoryBeanClass);
+    if (StringUtils.hasText(lazyInitialization)) {
+      scanner.setLazyInitialization(Boolean.valueOf(lazyInitialization));
+    }
+    scanner.registerFilters();
+    scanner.scan(
+        StringUtils.tokenizeToStringArray(this.basePackage, ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS));
+  }
+----
+
+代码已经非常明确了，就是注册了一个 `ClassPathMapperScanner`，同事调用了 `scanner.scan` 方法。下面，来看一下 `ClassPathMapperScanner`。
+
+== `ClassPathMapperScanner`
+
+老规矩，先看看 `ClassPathMapperScanner` 的定义：
+
+[{java_src_attr}]
+----
+public class ClassPathMapperScanner extends ClassPathBeanDefinitionScanner {
+
+  //...此处省去 N 行代码
+
+  private Class<? extends MapperFactoryBean> mapperFactoryBeanClass = MapperFactoryBean.class;
+
+  public ClassPathMapperScanner(BeanDefinitionRegistry registry) {
+    super(registry, false);
+  }
+----
+
+从这里可以看出，`ClassPathMapperScanner` 就是一个 `ClassPathBeanDefinitionScanner`，根据类名可以得知，扫描 `class path` 并生成 `BeanDefinition`。来看一下 `scan(String... basePackages)`
+
+.`ClassPathBeanDefinitionScanner#scan`
+[{java_src_attr}]
+----
+include::{context_src_dir}/context/annotation/ClassPathBeanDefinitionScanner.java[tag=scan]
+----
+
+这里把实际扫描工作委托给了 `doScan(basePackages)` 方法，而这个方法被 `ClassPathMapperScanner` 重写了，来看一下它的实现：
+
+.`ClassPathMapperScanner#doScan`
+[{java_src_attr}]
+----
+  /**
+   * Calls the parent search that will search and register all the candidates. Then the registered objects are post
+   * processed to set them as MapperFactoryBeans
+   */
+  @Override
+  public Set<BeanDefinitionHolder> doScan(String... basePackages) {
+    Set<BeanDefinitionHolder> beanDefinitions = super.doScan(basePackages);
+
+    if (beanDefinitions.isEmpty()) {
+      LOGGER.warn(() -> "No MyBatis mapper was found in '" + Arrays.toString(basePackages)
+          + "' package. Please check your configuration.");
+    } else {
+      processBeanDefinitions(beanDefinitions);
+    }
+
+    return beanDefinitions;
+  }
+----
+
+实际的扫描工作还是由父类 `super.doScan(basePackages)` 完成，只是又对扫描结果做了进一步处理： `processBeanDefinitions(beanDefinitions)`。
+
+.`ClassPathMapperScanner#processBeanDefinitions`
+[{java_src_attr}]
+----
+  private void processBeanDefinitions(Set<BeanDefinitionHolder> beanDefinitions) {
+    GenericBeanDefinition definition;
+    for (BeanDefinitionHolder holder : beanDefinitions) {
+      definition = (GenericBeanDefinition) holder.getBeanDefinition();
+      String beanClassName = definition.getBeanClassName();
+      LOGGER.debug(() -> "Creating MapperFactoryBean with name '" + holder.getBeanName() + "' and '" + beanClassName
+          + "' mapperInterface");
+
+      // the mapper interface is the original class of the bean
+      // but, the actual class of the bean is MapperFactoryBean
+      // 注意这行代码
+      definition.getConstructorArgumentValues().addGenericArgumentValue(beanClassName); // issue #59
+      // 注意这行代码
+      definition.setBeanClass(this.mapperFactoryBeanClass);
+
+      definition.getPropertyValues().add("addToConfig", this.addToConfig);
+
+      boolean explicitFactoryUsed = false;
+      if (StringUtils.hasText(this.sqlSessionFactoryBeanName)) {
+        definition.getPropertyValues().add("sqlSessionFactory",
+            new RuntimeBeanReference(this.sqlSessionFactoryBeanName));
+        explicitFactoryUsed = true;
+      } else if (this.sqlSessionFactory != null) {
+        definition.getPropertyValues().add("sqlSessionFactory", this.sqlSessionFactory);
+        explicitFactoryUsed = true;
+      }
+
+      if (StringUtils.hasText(this.sqlSessionTemplateBeanName)) {
+        if (explicitFactoryUsed) {
+          LOGGER.warn(
+              () -> "Cannot use both: sqlSessionTemplate and sqlSessionFactory together. sqlSessionFactory is ignored.");
+        }
+        definition.getPropertyValues().add("sqlSessionTemplate",
+            new RuntimeBeanReference(this.sqlSessionTemplateBeanName));
+        explicitFactoryUsed = true;
+      } else if (this.sqlSessionTemplate != null) {
+        if (explicitFactoryUsed) {
+          LOGGER.warn(
+              () -> "Cannot use both: sqlSessionTemplate and sqlSessionFactory together. sqlSessionFactory is ignored.");
+        }
+        definition.getPropertyValues().add("sqlSessionTemplate", this.sqlSessionTemplate);
+        explicitFactoryUsed = true;
+      }
+
+      if (!explicitFactoryUsed) {
+        LOGGER.debug(() -> "Enabling autowire by type for MapperFactoryBean with name '" + holder.getBeanName() + "'.");
+        definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+      }
+      definition.setLazyInit(lazyInitialization);
+    }
+  }
+----
+
+这里特别需要注意的是 `definition.setBeanClass(this.mapperFactoryBeanClass);` 这行代码。为什么把扫描出来的 `Mapper` 的 `Bean Class` 给设置成 `mapperFactoryBeanClass` 呢？通过上面的 `ClassPathMapperScanner` 类型定义可以知道，`mapperFactoryBeanClass` 就是 `MapperFactoryBean`。
+
+另外，还有一点值得思考，扫描出来的是接口，怎么生成对应的实例呢？带着这两个问题，来看一下 `MapperFactoryBean`。
+
+== `MapperFactoryBean`
+
+来看一下 `MapperFactoryBean` 的类型定义：
+
+[{java_src_attr}]
+----
+public class MapperFactoryBean<T> extends SqlSessionDaoSupport implements FactoryBean<T> {
+
+  private Class<T> mapperInterface;
+
+  private boolean addToConfig = true;
+
+  public MapperFactoryBean() {
+    // intentionally empty
+  }
+
+  public MapperFactoryBean(Class<T> mapperInterface) {
+    this.mapperInterface = mapperInterface;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  protected void checkDaoConfig() {
+    super.checkDaoConfig();
+
+    notNull(this.mapperInterface, "Property 'mapperInterface' is required");
+
+    Configuration configuration = getSqlSession().getConfiguration();
+    if (this.addToConfig && !configuration.hasMapper(this.mapperInterface)) {
+      try {
+        configuration.addMapper(this.mapperInterface);
+      } catch (Exception e) {
+        logger.error("Error while adding the mapper '" + this.mapperInterface + "' to configuration.", e);
+        throw new IllegalArgumentException(e);
+      } finally {
+        ErrorContext.instance().reset();
+      }
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public T getObject() throws Exception {
+    return getSqlSession().getMapper(this.mapperInterface);
+  }
+----
+
+可以看出 `MapperFactoryBean` 是一个 `FactoryBean`，上一篇文章 https://www.diguage.com/post/spring-extensions-overview/#factory-bean[Spring 扩展点概览及实践：FactoryBean^] 中提到，`FactoryBean` 就是专门生产 Bean 的工厂。
+
+再看构造函数 `public MapperFactoryBean(Class<T> mapperInterface)`，结合上一个片段代码中注意的地方可以看出，从 `Class Path` 扫描出来的 `BeanDefinition`，把扫描出来的接口设置为构造函数参数 `definition.getConstructorArgumentValues().addGenericArgumentValue(beanClassName);` 然后通过实例化 `FactoryBean`，然后调用 `getObject()` 就可以获得接口对应的实例对象。
+
+实例化对象的过程是由 MyBATIS 完成的，以后单独开篇来介绍，这里不再多做介绍。
+
+还有个疑问，MyBATIS 是怎么知道 Mapper 接口信息呢？这个问题就要看 `checkDaoConfig()` 方法了，单步调试代码可以知道父类 `DaoSupport#afterPropertiesSet` 调用的，在这个方法中，把 Mapper 接口信息条件到了 MyBATIS 中 `configuration.addMapper(this.mapperInterface)`。
+
+自此，MyBATIS 和 Spring 的整个流程就全部介绍完毕了。下面做个小节。
+
+== 小节
+
+本文从源码角度，深入绍了 MyBATIS 和 Spring 整合过程。整个过程中，用到了 Spring 的如下扩展点：
+
+. `@Import`
+. `MapperScannerRegistrar` - `ImportBeanDefinitionRegistrar`
+. `MapperScannerConfigurer` - `BeanDefinitionRegistryPostProcessor`
+. `ClassPathMapperScanner` - `ClassPathBeanDefinitionScanner`
+. `MapperFactoryBean` - `FactoryBean`
+. `InitializingBean`
+
+可见，和 Spring 整合并不是只靠一个扩展点就可以完成的，需要多个扩展点多方配合才能更好地完成整合过程。
+
+== 为什么在 Spring+MyBATIS 时，一级缓存失效？
+
+在原生 MyBATIS 实现中，在执行查询时，使用的 `SqlSession` 是 `DefaultSqlSession`， `DefaultSqlSession` 实例是在执行 `SqlSession session = sqlSessionFactory.openSession();` 时创建的。执行查询操作也是在 `DefaultSqlSession.selectList(String, Object, RowBounds, ResultHandler)` 中完成的。
+
+.使用 MyBAITS 原生查询
+[{java_src_attr}]
+----
+include::{truman_src_dir}/mybatis/MybatisTest.java[tag=testCacheQuery]
+
+include::{truman_src_dir}/mybatis/MybatisTest.java[tag=getDataSource]
+----
+
+Spring 的示例请看 <<Employees>>、 <<EmployeesMapper>>、 <<SpringMybatisTest>>。
+
+在 Spring + MyBATIS 搭配中，在执行查询时，使用的 `SqlSession` 是 `SqlSessionTemplate`（由“mybatis-spring”实现）。而 `SqlSessionTemplate` 的查询执行是委托给 `SqlSessionTemplate.sqlSessionProxy`（`SqlSession` 类型）来操作。 `SqlSessionTemplate.sqlSessionProxy` 是通过动态代理创建出来的代理实例。在代理实现内部执行时，从创建 `SqlSessionTemplate` 实例时经构造函数传入的 `SqlSessionFactory` 对象中获取 `SqlSession` 对象（创建过程与原生 MyBATIS 的构造过程相同）。最后，再去执行查询操作。
+
+在创建 `SqlSessionTemplate.sqlSessionProxy` 代理时，代理切面在执行完查询后，执行了 `closeSqlSession` 操作。正是因为执行了次操作，导致了一级缓存失效。
+
+.org.mybatis.spring.SqlSessionTemplate.SqlSessionInterceptor
+[{java_src_attr},highlight=34]
+----
+  /**
+   * Proxy needed to route MyBatis method calls to the proper SqlSession got from Spring's Transaction Manager It also
+   * unwraps exceptions thrown by {@code Method#invoke(Object, Object...)} to pass a {@code PersistenceException} to the
+   * {@code PersistenceExceptionTranslator}.
+   */
+  private class SqlSessionInterceptor implements InvocationHandler {
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      SqlSession sqlSession = getSqlSession(SqlSessionTemplate.this.sqlSessionFactory,
+          SqlSessionTemplate.this.executorType, SqlSessionTemplate.this.exceptionTranslator);
+      try {
+        Object result = method.invoke(sqlSession, args);
+        if (!isSqlSessionTransactional(sqlSession, SqlSessionTemplate.this.sqlSessionFactory)) {
+          // force commit even on non-dirty sessions because some databases require
+          // a commit/rollback before calling close()
+          sqlSession.commit(true);
+        }
+        return result;
+      } catch (Throwable t) {
+        Throwable unwrapped = unwrapThrowable(t);
+        if (SqlSessionTemplate.this.exceptionTranslator != null && unwrapped instanceof PersistenceException) {
+          // release the connection to avoid a deadlock if the translator is no loaded. See issue #22
+          closeSqlSession(sqlSession, SqlSessionTemplate.this.sqlSessionFactory);
+          sqlSession = null;
+          Throwable translated = SqlSessionTemplate.this.exceptionTranslator
+              .translateExceptionIfPossible((PersistenceException) unwrapped);
+          if (translated != null) {
+            unwrapped = translated;
+          }
+        }
+        throw unwrapped;
+      } finally {
+        if (sqlSession != null) {
+          closeSqlSession(sqlSession, SqlSessionTemplate.this.sqlSessionFactory);
+        }
+      }
+    }
+  }
+----
+
+为什么要关闭 `SqlSession`？因为 Spring 没有把 `SqlSession` 实例暴露给用户，那么用户不能控制 `SqlSession` 的关闭操作。所以，在执行完查询操作后，就马上关闭 `SqlSession` 是一个比较合理的操作。
+
+在 Spring + MyBATIS 中， `Mapper` 的信息什么时候加入到 `Configuration` 的？ // TODO
+
+// == `MapperProxyFactory`
+
+// == `MapperProxy`
+
+== 参考资料
+
+. https://tech.meituan.com/2018/01/19/mybatis-cache.html[聊聊MyBatis缓存机制^] -- 文章写的很好，值得认真阅读！
+. https://www.cnblogs.com/java-chen-hao/p/11833780.html[Mybaits 源码解析 （十）- Spring-Mybatis框架使用与源码解析^]
+. https://juejin.im/post/5dbff6fae51d455c042008e6[Mybatis源码解析(一) — mybatis与Spring是如何整合的？^]
+

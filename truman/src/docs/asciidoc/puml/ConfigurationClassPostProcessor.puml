@@ -1,0 +1,18 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title "**BeanFactoryPostProcessor 继承体系**"
+
+interface BeanFactoryPostProcessor {
+  + postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory): void
+}
+
+interface BeanDefinitionRegistryPostProcessor extends BeanFactoryPostProcessor {
+  + postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry): void
+}
+
+class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPostProcessor
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

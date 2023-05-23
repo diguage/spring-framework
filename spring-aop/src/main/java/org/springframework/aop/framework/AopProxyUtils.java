@@ -148,6 +148,9 @@ public abstract class AopProxyUtils {
 	}
 
 	/**
+	 * 获取代理类要实现的接口，除了 Advised 对象中配置的，
+	 * 还会加上 SpringProxy, Advised(opaque=false)，获取完整的代理接口 FIXME dgg 这是何意？
+	 *
 	 * Determine the complete set of interfaces to proxy for the given AOP configuration.
 	 * <p>This will always add the {@link Advised} interface unless the AdvisedSupport's
 	 * {@link AdvisedSupport#setOpaque "opaque"} flag is on. Always adds the

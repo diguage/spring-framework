@@ -1,0 +1,28 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **AspectInstanceFactory 继承体系**
+
+interface AspectInstanceFactory
+
+interface MetadataAwareAspectInstanceFactory extends AspectInstanceFactory
+
+class SingletonAspectInstanceFactory implements AspectInstanceFactory
+
+class SimpleBeanFactoryAwareAspectInstanceFactory implements AspectInstanceFactory
+
+class SimpleAspectInstanceFactory implements AspectInstanceFactory
+
+class SimpleMetadataAwareAspectInstanceFactory extends SimpleAspectInstanceFactory 		implements MetadataAwareAspectInstanceFactory
+
+class SingletonMetadataAwareAspectInstanceFactory extends SingletonAspectInstanceFactory implements MetadataAwareAspectInstanceFactory
+
+class BeanFactoryAspectInstanceFactory implements MetadataAwareAspectInstanceFactory
+
+class PrototypeAspectInstanceFactory extends BeanFactoryAspectInstanceFactory
+
+class LazySingletonAspectInstanceFactoryDecorator implements MetadataAwareAspectInstanceFactory
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

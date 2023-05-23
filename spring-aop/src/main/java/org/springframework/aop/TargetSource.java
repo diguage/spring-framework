@@ -19,6 +19,20 @@ package org.springframework.aop;
 import org.jspecify.annotations.Nullable;
 
 /**
+ * `TargetSource` 最主要的特性是，每次方法调用都会触发 `TargetSource` 的
+ * `getTarget()` 方法， `getTarget()` 方法将从相应的 `TargetSource`
+ * 实现类中取得具体的目标对象，这样就可以控制每次方法调用作用到的具体实例对象。
+ *
+ * <p>主要实现有：
+ *
+ * <ul>
+ *     <li>SingletonTargetSource -- 内部只持有一个目标对象，每次调用时，都会返回这同一个目标对象。</li>
+ *     <li>PrototypeTargetSource -- 每次调用目标对象上的方法时，都会返回一个新的目标对象实例供调用。注意： `scope` 要设置成 `prototype`；通过 `targetBeanName` 属性指定目标对象的 bean 定义名称，而不是引用。</li>
+ *     <li>HotSwappableTargetSource -- 使用 `HotSwappableTargetSource` 封装目标对象，可以在应用程序运行时，根据某种特定条件，动态地替换目标对象类的具体实现。</li>
+ *     <li>CommonsPool2TargetSource -- 使用 Apache Commons Pool 2 来提供对象池的支持。</li>
+ *     <li>ThreadLocalTargetSource -- 为不同线程调用提供不同的目标对象。保证各自线程上对目标对象的调用，可以被分配到当前线程对应的那个目标对象实例上。注意： scope 要设置成 prototype。</li>
+ * </ul>
+ *
  * A {@code TargetSource} is used to obtain the current "target" of
  * an AOP invocation, which will be invoked via reflection if no around
  * advice chooses to end the interceptor chain itself.

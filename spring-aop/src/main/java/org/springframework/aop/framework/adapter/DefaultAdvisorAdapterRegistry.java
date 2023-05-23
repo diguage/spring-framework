@@ -43,6 +43,8 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 	private static final MethodInterceptor[] EMPTY_METHOD_INTERCEPTOR_ARRAY = new MethodInterceptor[0];
 
 
+	// 持有一个 AdvisorAdapter 的 List，这个 List 中的 Advisor
+	// 是与实现 Spring AOP 的advice 增强功能相对应的
 	private final List<AdvisorAdapter> adapters = new ArrayList<>(3);
 
 
@@ -58,16 +60,20 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 
 	@Override
 	public Advisor wrap(Object adviceObject) throws UnknownAdviceTypeException {
+		// 是 Advisor 对象则直接返回
 		if (adviceObject instanceof Advisor advisor) {
 			return advisor;
 		}
+		// 此方法只处理 Advisor 和 Advice，不是则不能处理
 		if (!(adviceObject instanceof Advice advice)) {
 			throw new UnknownAdviceTypeException(adviceObject);
 		}
+		// 如果是 MethodInterceptor 则使用 DefaultPointcutAdvisor 封装
 		if (advice instanceof MethodInterceptor) {
 			// So well-known it doesn't even need an adapter.
 			return new DefaultPointcutAdvisor(advice);
 		}
+		// 存在对应的适配器，则也进行封装
 		for (AdvisorAdapter adapter : this.adapters) {
 			// Check that it is supported.
 			if (adapter.supportsAdvice(advice)) {
