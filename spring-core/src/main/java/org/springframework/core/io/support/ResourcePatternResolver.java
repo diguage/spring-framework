@@ -22,6 +22,14 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
 /**
+ * 用于将 Resource Pattern 解析为 ResourcePatternResolver 对象的策略接口。<p/>
+ *
+ * ResourcePatternResolver则可以根据指定的资源路径匹配模式， 每次返回多个Resource实例。<p>
+ *
+ * 引入了一种新的协议前缀 `classpath*:`。<p>
+ *
+ * 常用实现有： PathMatchingResourcePatternResolver。<p>
+ *
  * Strategy interface for resolving a location pattern (for example,
  * an Ant-style path pattern) into {@link Resource} objects.
  *

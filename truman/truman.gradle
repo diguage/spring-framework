@@ -1,0 +1,218 @@
+plugins {
+    id 'war'
+    id 'me.champeau.jmh'
+    id 'org.asciidoctor.jvm.convert' version '4.0.5'
+    id 'org.asciidoctor.jvm.pdf' version '4.0.5'
+    id 'org.asciidoctor.jvm.gems' version '4.0.5'
+    id 'org.asciidoctor.editorconfig' version '4.0.5'
+    // id 'org.asciidoctor.jvm.revealjs' version '4.0.5'
+}
+
+configurations {
+    // asciidoctorExt
+    // asciidocExtensions
+
+    // // 配置全局排除某个依赖
+    // all {
+    //     // 不能指定版本，杀伤力太强！
+    //     exclude group: "org.apache.logging.log4j", module: "log4j-api"
+    // }
+}
+
+dependencies {
+    // asciidoctorGems "rubygems:rouge:4.5.1"
+    // asciidoctorGems "rubygems:asciidoctor-multipage:0.0.19"
+    // asciidoctorGems "rubygems:asciidoctor-comment-links:0.0.2"
+
+    implementation(project(":spring-beans"))
+    implementation(project(":spring-context"))
+    implementation(project(":spring-jdbc"))
+    implementation(project(":spring-tx"))
+    implementation(project(":spring-webmvc"))
+
+    implementation(project(":spring-test"))
+
+    implementation("jakarta.annotation:jakarta.annotation-api")
+    implementation("com.fasterxml.jackson.core:jackson-databind")
+
+    implementation("org.aspectj:aspectjweaver")
+
+    implementation('org.projectlombok:lombok:1.18.38')
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
+
+    implementation 'com.zaxxer:HikariCP:6.3.0'
+    implementation 'com.mysql:mysql-connector-j:8.4.0'
+    // implementation 'mysql:mysql-connector-java:5.1.49'
+    implementation 'org.mybatis:mybatis:3.5.19'
+    implementation 'org.mybatis:mybatis-spring:3.0.5'
+
+    providedCompile("jakarta.servlet:jakarta.servlet-api:6.1.0")
+    implementation('io.undertow:undertow-servlet:2.3.18.Final')
+    implementation('io.undertow:undertow-websockets-jsr:2.3.18.Final')
+
+
+    // // 使用测试，注解总报错
+    // // TODO 加了下面的依赖不报错了。新问题：明明没有使用 Kotlinx，为啥却要加这个依赖？
+    // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+
+    jmh 'org.openjdk.jmh:jmh-core:1.37'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
+    jmh 'net.sf.jopt-simple:jopt-simple:5.0.4'
+
+    implementation platform("org.apache.logging.log4j:log4j-bom") // 与主项目保持一致
+    // implementation platform("org.apache.logging.log4j:log4j-bom:3.0.0-beta3")
+    implementation("org.slf4j:slf4j-api")
+    implementation("commons-logging:commons-logging:1.3.5")
+    // implementation platform("org.apache.logging.log4j:log4j-bom:3.0.0-beta3")
+    implementation("org.apache.logging.log4j:log4j-api")
+    // FIXME 目前 log4j-core:3.0.0-beta3 与 log4j-api:3.0.0-beta2 不搭配
+    //       log4j-core 使用了一个 log4j-api 中已经删去的方法：
+    //       org.apache.logging.log4j.util.ServiceLoaderUtil.safeStream(三个参数)
+    implementation("org.apache.logging.log4j:log4j-core")
+    implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
+    implementation("org.apache.logging.log4j:log4j-1.2-api")
+    // 通过上面 configurations.all 删除，也可以在每个依赖中删除
+    // implementation("org.apache.logging.log4j:log4j-1.2-api") {
+    //     exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+    // }
+    implementation("org.apache.logging.log4j:log4j-jcl")
+    implementation("org.apache.logging.log4j:log4j-jul")
+
+
+    implementation("org.junit.platform:junit-platform-launcher")
+    implementation("org.junit.jupiter:junit-jupiter-engine")
+    implementation("org.mockito:mockito-core")
+    implementation("org.mockito:mockito-junit-jupiter")
+    implementation("org.assertj:assertj-core")
+
+    implementation platform("org.apache.dubbo:dubbo-bom:3.3.5")
+    implementation("org.apache.dubbo:dubbo-registry-multicast")
+    implementation("org.apache.dubbo:dubbo-registry-zookeeper")
+    implementation("org.apache.dubbo:dubbo-configcenter-zookeeper")
+    implementation("org.apache.dubbo:dubbo-metadata-report-zookeeper")
+    implementation("org.apache.dubbo:dubbo-rpc-dubbo")
+    implementation("org.apache.dubbo:dubbo-config-spring")
+    implementation("org.apache.dubbo:dubbo-remoting-netty4")
+    implementation("org.apache.dubbo:dubbo-serialization-hessian2")
+}
+
+test {
+    // make sure the classes dir is used on the test classpath (required by ResourceTests)
+    // When test fixtures are involved, the JAR is used by default
+    classpath = sourceSets.main.output.classesDirs + classpath - files(jar.archiveFile)
+}
+
+asciidoctor {
+    // 加载必要的 Gem
+    dependsOn asciidoctorGemsPrepare
+    // configurations 'asciidoctorExt'
+    // configurations 'asciidoctorExtensions'
+
+    baseDirFollowsSourceDir()
+
+    sources {
+        include 'index.adoc'
+    }
+    outputDir = file('build/docs/html5')
+    forkOptions {
+        jvmArgs += ["--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.io=ALL-UNNAMED"]
+    }
+    logDocuments = true
+}
+
+asciidoctorPdf {
+    dependsOn asciidoctorGemsPrepare
+
+    baseDirFollowsSourceDir()
+
+    asciidoctorj {
+        requires 'rouge'
+
+        attributes "build-gradle": file('build.gradle'),
+                "pdf-fontsdir": "${getProjectOperations().projectDir}/cfg/fonts;GEM_FONTS_DIR;",
+                "pdf-themesdir": "${getProjectOperations().projectDir}/cfg/theme",
+                "pdf-theme": "Source",
+                "source-highlighter": 'rouge',
+                "image_attr": 'align="center",pdfwidth=98%',
+                "diagram_attr": 'format=png,align="center",pdfwidth=98%'
+    }
+    sources {
+        include 'index.adoc'
+    }
+    outputDir = file('build/docs/pdf')
+    forkOptions {
+        jvmArgs += ["--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.io=ALL-UNNAMED"]
+    }
+    logDocuments = true
+}
+
+asciidoctorj {
+    requires 'rouge'
+    // requires "asciidoctor-comment-links"
+    // // TODO 不生效
+    // // https://github.com/owenh000/asciidoctor-multipage
+    // requires "asciidoctor-multipage"
+
+    def sourceAttr = 'linenums,indent=0,subs="attributes,verbatim"'
+
+    version = '3.0.0'
+    jrubyVersion = '10.0.2.0'
+    fatalWarnings ".*"
+    options doctype: 'book', eruby: 'erubis'
+    attributes([
+            author               : 'D瓜哥',
+            email                : 'https://www.diguage.com',
+            revnumber            : project.version,
+            icons                : 'font',
+            docinfo              : 'shared',
+            'source-highlighter' : 'rouge',
+            'rouge-style'        : 'github', // molokai, monokai, github, gruvbox
+            'linkcss'            : 'true',
+            toc                  : 'left',
+            toclevels            : 4,
+            sectnums             : false,
+            sectnumlevels        : 4,
+            sectanchors          : true,
+            fontsDir             : 'cfg/fonts',
+            graphvizdot          : '/usr/local/bin/dot',
+            stylesdir            : 'css',
+            homepage             : 'https://www.diguage.com',
+            plantumlconfig       : "${getProjectOperations().projectDir}/cfg/plantuml.cfg",
+            "scripts"            : "cjk",
+            // backend: "multipage_html5",
+
+            'spring-version'     : project.version,
+            'source_attr'        : sourceAttr,
+            'java_src_attr'      : "source%nowrap,java,${sourceAttr}",
+            'xml_src_attr'       : "source%nowrap,xml,${sourceAttr}",
+            'image_attr'         : 'align="center",width=98%',
+            'diagram_attr'       : 'format=svg,align="center",width=98%',
+            'truman_src_dir'     : "${getProjectOperations().projectDir}/src/main/java/com/diguage/truman",
+            'truman_resource_dir': "${getProjectOperations().projectDir}/src/main/resources/com/diguage/truman",
+            'aop_src_dir'        : "${project.rootDir}/spring-aop/src/main/java/org/springframework/aop",
+            'beans_src_dir'      : "${project.rootDir}/spring-beans/src/main/java/org/springframework/beans",
+            'context_src_dir'    : "${project.rootDir}/spring-context/src/main/java/org/springframework",
+            'core_src_dir'       : "${project.rootDir}/spring-core/src/main/java/org/springframework",
+            'jdbc_src_dir'       : "${project.rootDir}/spring-jdbc/src/main/java/org/springframework/jdbc",
+            'tx_src_dir'         : "${project.rootDir}/spring-tx/src/main/java/org/springframework"
+    ])
+    modules {
+        pdf {
+            version '2.3.19'
+        }
+        epub {
+            version '2.2.0'
+        }
+        diagram {
+            version '3.0.1'
+        }
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+//    ruby.gems()
+}

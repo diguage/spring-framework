@@ -98,6 +98,8 @@ public class SQLErrorCodesFactory {
 
 
 	/**
+	 * 加载 org/springframework/jdbc/support/sql-error-codes.xml 文件中定义的错误码
+	 *
 	 * Create a new instance of the {@link SQLErrorCodesFactory} class.
 	 * <p>Not public to enforce Singleton design pattern. Would be private
 	 * except to allow testing via overriding the

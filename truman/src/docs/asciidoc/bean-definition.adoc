@@ -1,0 +1,107 @@
+= 核心数据结构：BeanDefinition
+
+林纳斯·托瓦兹（Linus Torvalds）说：“我从心底认为，优秀的程序员与平庸的程序员之间的区别，是在于认为自己的代码重要还是数据结构更加重要。平庸的程序员眼里只有代码，优秀的程序员则关注数据结构及之前的关系。” 也许很多人觉得 Spring 神秘莫测，但是如果了解了它的核心数据结构，很多问题迎刃而解。
+
+Spring 中两个数据结构最核心：① `BeanDefinition`，用于表示 Bean 的定义；② `BeanFactory`，用于表示整个 IoC 容器。
+
+在前面文章 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^]中，介绍了 Spring Bean 的生命周期。不知道大家有没有思考过 Spring 在内部是如何表示一个 Bean 的？本篇文章，就来聊一聊 `BeanDefinition`
+
+== 问题
+
+使用 Spring 时，尤其是使用 XML 配置的时候，也许我们会这样的问题：
+
+. Bean 怎么表示？
+. Bean 的依赖怎么表示？
+. `init-method` 方法怎么存储？
+. Bean 的一些属性，比如 `lazy-init` 等，怎么表示？
+. Bean 构造函数的参数怎么存储？
+. ...
+
+Java 也有类似的问题，比如怎么表示一个类？Java 通过反射 API 来解决这个问题：
+
+. `Class`
+. `Method`
+. `Field`
+. `Constructor`
+. `Annotation`
+
+但是，为什么 Spring 还要自己定义一套呢？主要原因是 Java 反射 API 不满足 Spring 的需求，比如，它没办法表示哪些类是 `SCOPE_SINGLETON`，哪些类是 `SCOPE_PROTOTYPE`。
+
+另外，Spring 的 Bean 抽象也并不是完全自定义的，它是基于 Java 反射 API 又增加了自定义功能，其核心 API 就是 `BeanDefinition`。下面，我们来仔细看一下它的继承体系以及内部核心属性。
+
+== 继承体系
+
+plantuml::{includedir}/puml/BeanDefinition.puml[{diagram_attr},title="BeanDefinition 继承体系",alt="BeanDefinition 继承体系"]
+
+* `AttributeAccessor`: 提供对 `BeanDefinition` 属性操作能力。
+* `AttributeAccessorSupport`: 使用了 `Map` 进行属性的存储的。
+* `BeanMetadataAttributeAccessor`: 代表了一个 Bean 元数据的属性操作。
+* `BeanMetadataElement`: `BeanDefinition` 元数据，返回该 Bean 的来源。
+* `BeanDefinition`: 用来描述 Bean，里面存放 Bean 元数据，比如 Bean 类名、scope、属性、构造函数参数列表、依赖的 Bean、是否是单例类、是否是懒加载等一些列信息。
+* `AbstractBeanDefinition`: 抽象类统一实现了 `BeanDefinition` 定义的一部分操作，可以说是定义了 `BeanDefinition` 很多默认的属性。
+* `RootBeanDefinition`: 代表一个 XML，Java Config来的 `BeanDefinition`。
+* `AnnotatedBeanDefinition`: 表示注解类型 `BeanDefinition`。有两个重要的属性：`AnnotationMetadata`、`MethodMetadata` 分别表示 `BeanDefinition` 的注解元信息和方法元信息。实现了此接口的 `BeanDefinition` 可以获取到注解元数据和方法元数据。
+* `ChildBeanDefinition`: 可以让子 `BeanDefinition` 定义拥有从父母那里继承配置的能力。
+* `GenericBeanDefinition`: 是 Spring 2.5 之后才有的，这个的想法是用来替代 `RootBeanDefinition`/`ChildBeanDefinition`，而 `RootBeanDefinition`/`ChildBeanDefinition` 可以在 Spring 预加载的时候使用。
+* `AnnotatedGenericBeanDefinition`: 表示 `@Configuration` 注解注释的 `BeanDefinition` 类。是 `AnnotatedBeanDefinition` 的一个具体实现。传入指定类后，可以获取类中的注解。
+* `ScannedGenericBeanDefinition`: 表示 `@Component`、`@Service`、`@Controller` 等注解注释的 Bean 类。是 `AnnotatedBeanDefinition` 的另一个实现，与 `AnnotatedGenericBeanDefinition` 不同的是，`ScannedGenericBeanDefinition` 是通过扫描 class，然后操作 ASM 进行解析的。
+
+== 核心属性
+
+下面主要介绍一下它的核心内部属性：
+
+. `Map<String, Object> attributes = new LinkedHashMap<>()`：配置的属性以及属性值。
+. `Object source`：存储 Bean 来源，有时是 XML `Element` 对象。还可以是其他对象。
+. `Object beanClass`：Bean 的类型定义，有时是 `Class` 类型的对象；有时是类的全限定名，此时就是 `String` 类型。
+. `abstractFlag = false`：默认为 `false`。如果为 `true`，则表示不打算实例化该 Bean，仅仅作为其他 Bean 的父 Bean。一般与 `parent` 一起使用，设置 `abstract` 的 Bean 定义不需要创建实例，仅仅作为 `parent` 来进行一些通用的配置，后面的 Bean 通过设置 `parent` 来获取相应的配置信息，从而达到简化配置的目的。
+. `Boolean lazyInit`：是否懒加载。
+. `int autowireMode = AUTOWIRE_NO`：注入模式，默认为 `AUTOWIRE_NO`。一共有五个可选项：
+.. `AUTOWIRE_NO` -- 不自动注入。
+.. `AUTOWIRE_BY_NAME` -- 根据名称自动注入。
+.. `AUTOWIRE_BY_TYPE` -- 根据类型自动注入。
+.. `AUTOWIRE_CONSTRUCTOR` -- 自动根据构造函数注入。
+.. `AUTOWIRE_AUTODETECT` -- 自动检测。
+. `int dependencyCheck = DEPENDENCY_CHECK_NONE`：依赖检测。一共有四个可选项：
+.. `DEPENDENCY_CHECK_NONE` -- 不进行依赖检测。
+.. `DEPENDENCY_CHECK_OBJECTS` -- 只检测对象引用。
+.. `DEPENDENCY_CHECK_SIMPLE` -- 只检测简单对象：基础类型、`Enum`、`CharSequence`、`Number`、`Date`、`Temporal`、`URI`、`URL`、`Locale`、`Class` 以及这些类型的数组对象。
+.. `DEPENDENCY_CHECK_ALL` -- 检测所有依赖。
+. [#depends-on]`String[] dependsOn`： 这个属性在 `spring-beans.xsd / xsd:attribute / depends-on` 中有说明。原文是这样说的：__The names of the beans that this bean depends on being initialized. The bean factory will guarantee that these beans get initialized before this bean.__ 所以，这个属性并不是一个“需要注入的依赖属性”，而是 Bean 创建的前后依赖关系。这一点可能跟大多数人的认识不一样。
++
+Bean 属性的依赖存在 `CommonAnnotationBeanPostProcessor#injectionMetadataCache` 和 `AutowiredAnnotationBeanPostProcessor#injectionMetadataCache` 属性中。在 https://www.diguage.com/post/spring-bean-lifecycle-overview/#post-process-merged-bean-definition[Spring Bean 生命周期概述^] 中描述的关于属性的依赖读取和注入也是靠这个两个属性来保存依赖关系的。
++
+在 https://www.diguage.com/post/dive-into-spring-core-data-structure-bean-factory/#dependent-bean-map[深入剖析 Spring 核心数据结构：BeanFactory : `Map<String, Set<String>> dependentBeanMap`^] 中提到的 `DefaultSingletonBeanRegistry#dependentBeanMap` 和 `DefaultSingletonBeanRegistry#dependenciesForBeanMap` 两个属性，保存了这个 `dependsOn` 依赖关系的正向关系和反向关系。当工厂销毁时，也会通过 `dependentBeanMap` 属性，先销毁依赖的 Bean，然后再销毁自身。
++
+. `boolean autowireCandidate = true`：声明是否是其他依赖的候选 Bean；只会影响根据类型注入的情况，不会影响根据名称明确指明依赖的情况。
+. `boolean primary = false`：是否是首选 Bean，标注了 `@Primary` 则为 `true`。当 A 类型的 Bean 需要注入 B 类型的实现类，并且 B 类型的实现类有多个，在按类型将 B 的实现类注入到 A 中时，优先注入该属性为 `true` 的实现类，当然如果同一个类的实现类有多个 `primary` 为 `true`，则抛出异常。
+. `Map<String, AutowireCandidateQualifier> qualifiers = new LinkedHashMap<>()`：
+. `Supplier<?> instanceSupplier`：产生对象的生产者。
+. `boolean nonPublicAccessAllowed = true`：是否允许访问非 `public` 的构造器和方法。
+. `boolean lenientConstructorResolution = true`：是否采用宽容模式来解析构造函数。如果是 `false`，则只要参数类型不匹配就抛出异常。
+. `String factoryBeanName`：当 Bean 的创建方式是以工厂进行创建的时候，该方法设置工厂的名称。
+. `String factoryMethodName`：工厂创建 Bean 时，设置创建 Bean 的方法名称。
+. `ConstructorArgumentValues constructorArgumentValues`：构造函数参数值。
+. `MutablePropertyValues propertyValues`： 获取类的属性和属性值的类 `PropertyValue`。
+. `MethodOverrides methodOverrides = new MethodOverrides()`：
+. `String initMethodName`：初始化方法名，对应 `init-method` 或者 `@PostConstruct` 标注的方法。
+. `String destroyMethodName`：销毁方法名，对应 `` 或 `@PreDestroy` 标注的方法。
+. `boolean enforceInitMethod = true`：强制初始化方法，默认是 `false`。如果为 `true`，而且 `initMethodName` 为空，则报错。
+. `boolean enforceDestroyMethod = true`：强制销毁方法，默认是 `false`。如果为 `true`，而且 `destroyMethodName` 为空，则报错。
+. `boolean synthetic = false`：是否是合成的。
+. `int role = BeanDefinition.ROLE_APPLICATION`：Bean 角色。可选项有三个：
+.. `ROLE_APPLICATION` -- 为应用程序定义。
+.. `ROLE_SUPPORT` -- 为应用程序定义的比较大的对象。
+.. `ROLE_INFRASTRUCTURE` -- 内部定义的基础 Bean。
+. `String description`：Bean 描述。
+. `Resource resource`：Bean 的来源 `Resource` 对象。
+. `AnnotationMetadata metadata`： 注解元信息。
+. `MethodMetadata factoryMethodMetadata`：方法注解元信息。
+
+`BeanDefinition` 的代码在 https://github.com/spring-projects/spring-framework/blob/master/spring-beans/src/main/java/org/springframework/beans/factory/config/BeanDefinition.java[spring-framework/BeanDefinition.java^] 中。感兴趣，可以自己 clone 下来，把玩把玩。
+
+下一篇文章，D瓜哥重点带大家了解一下 `BeanFactory`： https://www.diguage.com/post/dive-into-spring-core-data-structure-bean-factory/[深入剖析 Spring 核心数据结构：BeanFactory]。
+
+== 参考资料
+
+. https://juejin.im/post/5d9c97d9518825157267fb25[spring源码分析系列2:Bean与BeanDefinition关系 - 掘金^]
+. https://www.jianshu.com/p/56e42e82e9a0[1. spring 4 剖析-BeanDefinition详解 - 简书^]

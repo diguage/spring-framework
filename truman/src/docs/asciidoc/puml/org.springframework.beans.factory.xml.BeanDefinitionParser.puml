@@ -1,0 +1,36 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **""PropertyPlaceholderBeanDefinitionParser"" 继承体系**
+
+
+interface BeanDefinitionParser {
+	+ BeanDefinition parse(Element element, ParserContext parserContext)
+}
+
+abstract class AbstractBeanDefinitionParser implements BeanDefinitionParser {
+    # void registerBeanDefinition(BeanDefinitionHolder definition, BeanDefinitionRegistry registry)
+    + final BeanDefinition parse(Element element, ParserContext parserContext)
+}
+note left: 如果想自己扩展 Spring，\n可以考虑继承该类，\n减少很多不必要的麻烦。
+
+abstract class AbstractSingleBeanDefinitionParser extends AbstractBeanDefinitionParser {
+    # final AbstractBeanDefinition parseInternal(Element element, ParserContext parserContext)
+}
+note left: 如果单例 Bean，\n扩展该类是最佳选择。
+
+abstract class AbstractPropertyLoadingBeanDefinitionParser extends AbstractSingleBeanDefinitionParser {
+    # void doParse(Element element, ParserContext parserContext, BeanDefinitionBuilder builder)
+}
+
+class PropertyPlaceholderBeanDefinitionParser extends AbstractPropertyLoadingBeanDefinitionParser {
+    # Class<?> getBeanClass(Element element)
+    # void doParse(Element element, ParserContext parserContext, BeanDefinitionBuilder builder)
+}
+
+note bottom of PropertyPlaceholderBeanDefinitionParser: 从该继承关系图上来看， ""PropertyPlaceholderBeanDefinitionParser"" 是\n一个 ""BeanDefinitionParser""，将 <property-placeholder> 标签处理成一个\n ""BeanDefinition""，然后后续交给 Spring 来处理。
+
+abstract class AbstractSimpleBeanDefinitionParser extends AbstractSingleBeanDefinitionParser
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

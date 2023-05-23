@@ -117,15 +117,28 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 */
 	@Override
 	protected final void refreshBeanFactory() throws BeansException {
+		// 如果已经有容器，销毁容器中的 bean，关闭容器
+		// 判断是否存在，若存在，则销毁后并关闭
 		if (hasBeanFactory()) {
+			// 销毁 BeanFactory 工厂
 			destroyBeans();
+			// 关闭 BeanFactory 工厂
 			closeBeanFactory();
 		}
 		try {
+			// 创建 IoC 容器
+			// 创建 BeanFactory 工厂（DefaultListableBeanFactory）
 			DefaultListableBeanFactory beanFactory = createBeanFactory();
+			// 序列化指定 id，可以从 id 反序列化 BeanFactory 对象
 			beanFactory.setSerializationId(getId());
 			beanFactory.setApplicationStartup(getApplicationStartup());
+			// 对 IoC 容器进行定制化，如设置启动参数，开启注解的自动装配等
+			// 定制 BeanFactory，设置相关属性，包括是否允许覆盖同名称的不同定义的对象以及循环依赖
 			customizeBeanFactory(beanFactory);
+			// 调用载入 Bean 定义的方法，主要这里又使用了一个委派模式，
+			// 在当前类中只定义了抽象的 loadBeanDefinitions 方法，
+			// 具体的实现调用子类容器
+			// 初始化 BeanDefinitionReader 读取器，加载 BeanDefinitions(Bean 定义信息)
 			loadBeanDefinitions(beanFactory);
 			this.beanFactory = beanFactory;
 		}
@@ -134,6 +147,9 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 		}
 	}
 
+	/**
+	 * 取消刷新BeanFactory
+	 */
 	@Override
 	protected void cancelRefresh(Throwable ex) {
 		DefaultListableBeanFactory beanFactory = this.beanFactory;
@@ -143,6 +159,9 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 		super.cancelRefresh(ex);
 	}
 
+	/**
+	 * 关闭BeanFactory工厂
+	 */
 	@Override
 	protected final void closeBeanFactory() {
 		DefaultListableBeanFactory beanFactory = this.beanFactory;
@@ -153,6 +172,8 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	}
 
 	/**
+	 * 判断上下文环境中是否已存在BeanFactory工厂(即：至少刷新一次且尚未关闭)。<p/>
+	 *
 	 * Determine whether this context currently holds a bean factory,
 	 * i.e. has been refreshed at least once and not been closed yet.
 	 */
@@ -160,6 +181,9 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 		return (this.beanFactory != null);
 	}
 
+	/**
+	 * 获取BeanFactory
+	 */
 	@Override
 	public final ConfigurableListableBeanFactory getBeanFactory() {
 		DefaultListableBeanFactory beanFactory = this.beanFactory;
@@ -179,6 +203,8 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	}
 
 	/**
+	 * 创建 BeanFactory 工厂(DefaultListableBeanFactory)。<p/>
+	 *
 	 * Create an internal bean factory for this context.
 	 * Called for each {@link #refresh()} attempt.
 	 * <p>The default implementation creates a
@@ -197,6 +223,8 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	}
 
 	/**
+	 * 自定义 BeanFactory 工厂信息。<p/>
+	 *
 	 * Customize the internal bean factory used by this context.
 	 * Called for each {@link #refresh()} attempt.
 	 * <p>The default implementation applies this context's
@@ -220,6 +248,10 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	}
 
 	/**
+	 * 加载BeanDefinitions(Bean定义信息)。
+	 * 这里只定义了抽象的 loadBeanDefinitions 方法，
+	 * 容器真正调用的是其子类 AbstractXmlApplicationContext 对该方法的实现
+	 *
 	 * Load bean definitions into the given bean factory, typically through
 	 * delegating to one or more bean definition readers.
 	 * @param beanFactory the bean factory to load bean definitions into

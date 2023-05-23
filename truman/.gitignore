@@ -1,0 +1,5 @@
+build
+*.ttf
+*.otf
+*.tgz
+*.tar.gz

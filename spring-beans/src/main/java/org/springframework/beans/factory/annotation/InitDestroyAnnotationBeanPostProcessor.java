@@ -33,6 +33,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
+import com.diguage.labs.Printers;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jspecify.annotations.Nullable;
@@ -178,6 +180,12 @@ public class InitDestroyAnnotationBeanPostProcessor implements DestructionAwareB
 
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanClass, String beanName) {
+		Printers.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessMergedBeanDefinition",
+				beanDefinition.getClass().getSimpleName(),
+				beanClass.getSimpleName(),
+				beanName);
 		findLifecycleMetadata(beanDefinition, beanClass);
 	}
 
@@ -212,6 +220,12 @@ public class InitDestroyAnnotationBeanPostProcessor implements DestructionAwareB
 
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		Printers.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
 			metadata.invokeInitMethods(bean, beanName);
@@ -227,11 +241,23 @@ public class InitDestroyAnnotationBeanPostProcessor implements DestructionAwareB
 
 	@Override
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		Printers.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessAfterInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		return bean;
 	}
 
 	@Override
 	public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
+		Printers.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeDestruction",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
 			metadata.invokeDestroyMethods(bean, beanName);

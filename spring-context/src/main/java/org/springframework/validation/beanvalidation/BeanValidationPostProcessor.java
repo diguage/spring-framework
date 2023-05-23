@@ -25,6 +25,8 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import org.jspecify.annotations.Nullable;
 
+import com.diguage.labs.Printers;
+
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanInitializationException;
@@ -78,6 +80,10 @@ public class BeanValidationPostProcessor implements BeanPostProcessor, Initializ
 
 	@Override
 	public void afterPropertiesSet() {
+		Printers.printf(".. %s#%s()%n%n",
+				getClass().getSimpleName(),
+				"afterPropertiesSet");
+
 		if (this.validator == null) {
 			this.validator = Validation.buildDefaultValidatorFactory().getValidator();
 		}
@@ -86,6 +92,12 @@ public class BeanValidationPostProcessor implements BeanPostProcessor, Initializ
 
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		Printers.printf("%s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		if (!this.afterInitialization) {
 			doValidate(bean);
 		}
@@ -94,6 +106,12 @@ public class BeanValidationPostProcessor implements BeanPostProcessor, Initializ
 
 	@Override
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		Printers.printf("%s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessAfterInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		if (this.afterInitialization) {
 			doValidate(bean);
 		}

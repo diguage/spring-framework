@@ -178,6 +178,15 @@ public class SQLErrorCodeSQLExceptionTranslator extends AbstractFallbackSQLExcep
 	}
 
 
+	/**
+	 * 真正实现从错误码到异常的转换工作。在 sql-error-codes.xml 文件中定义异常类型，实现可扩展性。
+	 * 在两个地方完成异常转换工作：
+	 * <ol>
+	 *     <li>在执行 SQL 时报错，这个时候就要进行回滚。所以，在回滚时，执行异常转换。
+	 *         TODO dgg 如果"关闭事务"（事务是否可以关闭？）或只读事务时，有事务吗？会执行回滚吗？</li>
+	 *     <li>在提交时报错，进行异常转换。</li>
+	 * </ol>
+	 */
 	@SuppressWarnings("deprecation")
 	@Override
 	protected @Nullable DataAccessException doTranslate(String task, @Nullable String sql, SQLException ex) {

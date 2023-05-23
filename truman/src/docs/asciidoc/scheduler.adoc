@@ -1,0 +1,120 @@
+[#scheduler]
+= 定时调度
+
+[source,xml,{source_attr}]
+.Spring Quartz 配置
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- 配置方法映射工厂类 -->
+    <bean id="updateSnapInventory" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="jobClass" value="com.diguage.durian.schedule.SnapInventoryQuartzJobBean"/>
+        <property name="durability" value="true"/>
+        <property name="requestsRecovery" value="true" />
+    </bean>
+    <!-- 配置任务调度的的时间/周期 -->
+    <bean id="updateSnapInventoryTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="updateSnapInventory"/>
+        <property name="cronExpression" value="0 */10 * * * ?"/>
+    </bean>
+
+    <bean id="schedulerFactoryBean" class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <!--可选，QuartzScheduler 启动时更新己存在的Job，这样就不用每次修改targetObject后删除qrtz_job_details表对应记录了 -->
+        <property name="overwriteExistingJobs" value="true" />
+        <!--必须的，QuartzScheduler 延时启动，应用启动完后 QuartzScheduler 再启动 -->
+        <property name="startupDelay" value="300" />
+        <!-- 设置自动启动 -->
+        <property name="autoStartup" value="true" />
+        <property name="applicationContextSchedulerContextKey" value="applicationContext" />
+        <property name="configLocation" value="classpath:spring-quartz.properties" />
+        <property name="triggers">
+            <list>
+                <ref bean="updateSnapInventoryTrigger"/>
+                <ref bean="cancelTopTrigger"/>
+            </list>
+        </property>
+    </bean>
+</beans>
+----
+
+[source,{source_attr}]
+.spring-quartz.properties
+----
+include::{includedir}/spring-quartz.properties[]
+----
+
+[source,java,{source_attr}]
+.定时任务的实现
+----
+/**
+ * @author D瓜哥 · https://www.diguage.com
+ * @since 2016-11-28 16:53
+ */
+public class SnapInventoryQuartzJobBean extends QuartzJobBean implements ApplicationContextAware {
+  private CityService cityService;
+
+  private ItemDao itemDao;
+
+  private WmsInventoryService wmsInventoryService;
+
+  /** 将 Sku 的库存更新到 sku 表中，方便取用。 仅仅在不重要的查询中使用。 */
+  @Override
+  protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
+    // 查询每个城市
+    List<City> cityList = cityService.findAll();
+
+    for (City city : cityList) {
+      // 根据城市查询出在线的Item对应的itemId 和 skuId
+      List<Item> itemList = itemDao.findByCityId(city.getId(), Constants.ITEM_ONLINE);
+      if (CollectionUtils.isEmpty(itemList)) {
+        continue;
+      }
+      // 获取每个Item的库存
+      Set<Long> skuIds = Sets.newHashSetWithExpectedSize(itemList.size());
+      Map<Long, Item> skuIdToItemMap = Maps.newHashMapWithExpectedSize(itemList.size());
+      for (Item item : itemList) {
+        skuIds.add(item.getSkuId());
+        skuIdToItemMap.put(item.getSkuId(), item);
+      }
+      Map<Long, SkuForSales> skuIdToInvertoryMap =
+          wmsInventoryService.checkSkuOnSalesBySiteId(skuIds, city.getId());
+
+      // 将库存更新到 Item 表中
+      for (Item item : itemList) {
+        SkuForSales inventory = skuIdToInvertoryMap.get(item.getSkuId());
+        skuIdToItemMap.get(item.getSkuId()).setSnapInventory(inventory.getCount());
+      }
+      itemDao.batchUpdateSnapInvertory(itemList);
+    }
+  }
+
+  /**
+   * 处理办法借鉴
+   * https://stackoverflow.com/questions/6990767/inject-bean-reference-into-a-quartz-job-in-spring
+   *
+   * @param applicationContext ApplicationContext 实例
+   * @throws BeansException 异常
+   */
+  @Override
+  public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    this.cityService = applicationContext.getBean(CityService.class);
+    this.itemDao = applicationContext.getBean(ItemDao.class);
+    this.wmsInventoryService = applicationContext.getBean(WmsInventoryService.class);
+  }
+}
+----
+
+TIP: 注意这里实现的 `ApplicationContextAware` 接口。由于不能依赖不能注入进来，只能通过这种方式来获取。
+
+[source,sql,{source_attr}]
+.MySQL 相关脚本
+----
+include::{includedir}/tables_mysql_innodb.sql[]
+----
+
+TIP: 这是 Quartz 2.2.3 提供的脚本。可以从它的分发包中获取更多数据库支持的脚本。

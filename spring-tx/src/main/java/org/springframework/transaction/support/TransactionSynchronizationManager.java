@@ -139,6 +139,8 @@ public abstract class TransactionSynchronizationManager {
 	 * Actually check the value of the resource that is bound for the given key.
 	 */
 	private static @Nullable Object doGetResource(Object actualKey) {
+		// resources 是一个 ThreadLocal 线程私有对象，每个线程独立存储，
+		// 所以判断是否存在事务，判断的依据是当前线程、当前数据源(DataSource)中是否存在活跃的事务 -map.get(actualKey)。
 		Map<Object, Object> map = resources.get();
 		if (map == null) {
 			return null;
@@ -167,6 +169,7 @@ public abstract class TransactionSynchronizationManager {
 	 * @see ResourceTransactionManager#getResourceFactory()
 	 * @see #bindSynchronizedResource
 	 */
+	// 将数据库连接信息保存到 ThreadLocal 中
 	public static void bindResource(Object key, Object value) throws IllegalStateException {
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
 		Object oldValue = doBindResource(actualKey, value);

@@ -1,0 +1,33 @@
+seqdiag {
+  edge_length = 200;
+  span_height = 20;
+  span_width = 300;
+
+  "Actor" => "AbstractApplicationContext" [label = "refresh\n重塑容器"] {
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "prepareRefresh\n准备环境"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "obtainFreshBeanFactory\n获取BeanFactory"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "prepareBeanFactory\n准备 BeanFactory"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "postProcessBeanFactory\n对 BeanFactory 做后期处理", note = "\n预留扩展点\n目前是空实现\n_"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "invokeBeanFactoryPostProcessors\n调用 BeanFactoryPostProcessor 的 \npostProcessBeanFactory 方法"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "registerBeanPostProcessors\n注册 BeanPostProcessor"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "initMessageSource\n初始化 MessageSource", note = "\n国际化相关\n_"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "initApplicationEventMulticaster\n初始化应用事件广播器"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "onRefresh", note = "\n在 Web 容器中\n完成 DispatchServlet 九大组件的注册\n_"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "registerListeners\n注册事件监听器"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "finishBeanFactoryInitialization\n完成预初始化", note = "\n完成单例Bean实例化\n_"];
+
+    "AbstractApplicationContext" -> "AbstractApplicationContext" [label = "finishRefresh\n完成重塑", note = "\n删除一些不必要的配置信息\n_"];
+  }
+
+=== D瓜哥 · https://www.diguage.com · 出品 ===
+}

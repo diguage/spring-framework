@@ -18,10 +18,19 @@ package org.springframework.beans.factory.config;
 
 import org.jspecify.annotations.Nullable;
 
+import com.diguage.labs.Printers;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.PropertyValues;
 
 /**
+ * org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor
+ * 接口可以在对象的实例化过程中导致某种类似于电路“短路”的效果。实际上，并非所有注册 到Spring容器
+ * 内的bean定义都是按照图4-10的流程实例化的。在所有的步骤之前，也就是实例 化bean对象步骤之前，容器
+ * 会首先检查容器中是否注册有InstantiationAwareBeanPost- Processor类型的BeanPostProcessor。
+ * 如果有，首先使用相应的InstantiationAwareBean- PostProcessor来构造对象实例。构造成功后直接返
+ * 回构造完成的对象实例，而不会按照“正 规的流程”继续执行。这就是它可能造成“短路”的原因。
+ *
  * Subinterface of {@link BeanPostProcessor} that adds a before-instantiation callback,
  * and a callback after instantiation but before explicit properties are set or
  * autowiring occurs.
@@ -68,6 +77,12 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * @see org.springframework.beans.factory.support.AbstractBeanDefinition#getFactoryMethodName()
 	 */
 	default @Nullable Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
+		Printers.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeInstantiation",
+				beanClass.getSimpleName(),
+				beanName);
+
 		return null;
 	}
 
@@ -77,7 +92,8 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * <p>This is the ideal callback for performing custom field injection on the given bean
 	 * instance, right before Spring's autowiring kicks in.
 	 * <p>The default implementation returns {@code true}.
-	 * @param bean the bean instance created, with properties not having been set yet
+	 *
+	 * @param bean     the bean instance created, with properties not having been set yet
 	 * @param beanName the name of the bean
 	 * @return {@code true} if properties should be set on the bean; {@code false}
 	 * if property population should be skipped. Normal implementations should return {@code true}.
@@ -87,6 +103,12 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * @see #postProcessBeforeInstantiation
 	 */
 	default boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
+		Printers.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessAfterInstantiation",
+				bean.getClass().getSimpleName(),
+				beanName);
+
 		return true;
 	}
 
@@ -104,6 +126,12 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 */
 	default @Nullable PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName)
 			throws BeansException {
+		Printers.printf(".. %s#%s(%s, %s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessProperties",
+				pvs.getClass().getSimpleName(),
+				bean.getClass().getSimpleName(),
+				beanName);
 
 		return pvs;
 	}

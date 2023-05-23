@@ -19,6 +19,11 @@ package org.springframework.beans.factory;
 import org.jspecify.annotations.Nullable;
 
 /**
+ * 工厂 Bean，用于产生其他对象<p/>
+ *
+ * FactoryBean 接口为 Spring 容器提供了一个很好的封装机制，
+ * 具体的 getObject() 有不同的实现类根据不同的实现策略来具体提供。<p/>
+ *
  * Interface to be implemented by objects used within a {@link BeanFactory} which
  * are themselves factories for individual objects. If a bean implements this
  * interface, it is used as a factory for an object to expose, not directly as a
@@ -76,6 +81,8 @@ public interface FactoryBean<T> {
 
 
 	/**
+	 * 获取容器管理的对象实例<p/>
+	 *
 	 * Return an instance (possibly shared or independent) of the object
 	 * managed by this factory.
 	 * <p>As with a {@link BeanFactory}, this allows support for both the
@@ -95,6 +102,8 @@ public interface FactoryBean<T> {
 	@Nullable T getObject() throws Exception;
 
 	/**
+	 * 获取 Bean 工厂创建的对象的类型 <p/>
+	 *
 	 * Return the type of object that this FactoryBean creates,
 	 * or {@code null} if not known in advance.
 	 * <p>This allows one to check for specific types of beans without
@@ -116,6 +125,9 @@ public interface FactoryBean<T> {
 	@Nullable Class<?> getObjectType();
 
 	/**
+	 * Bean 工厂创建的对象是否是单态模式，如果是单态模式，
+	 * 则整个容器中只有一个实例对象，每次请求都返回同一个实例对象。<p/>
+	 *
 	 * Is the object managed by this factory a singleton? That is,
 	 * will {@link #getObject()} always return the same object
 	 * (a reference that can be cached)?

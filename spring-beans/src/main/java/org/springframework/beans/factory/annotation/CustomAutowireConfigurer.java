@@ -19,6 +19,8 @@ package org.springframework.beans.factory.annotation;
 import java.lang.annotation.Annotation;
 import java.util.Set;
 
+import com.diguage.labs.Printers;
+
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
@@ -89,6 +91,11 @@ public class CustomAutowireConfigurer implements BeanFactoryPostProcessor, BeanC
 	@Override
 	@SuppressWarnings("unchecked")
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		Printers.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		if (this.customQualifierTypes != null) {
 			if (!(beanFactory instanceof DefaultListableBeanFactory dlbf)) {
 				throw new IllegalStateException(

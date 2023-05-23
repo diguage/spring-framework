@@ -1,0 +1,8 @@
+[#uml]
+[appendix]
+= 常用 UML 图
+
+include::{includedir}/uml-class-diagram.adoc[leveloffset=+1]
+
+include::{includedir}/uml-sequence-diagram.adoc[leveloffset=+1]
+

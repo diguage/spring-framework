@@ -1,0 +1,30 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **XmlBeanFactory 初始化时序图**
+
+
+autonumber
+
+participant beanFactoryTest <<BeanFactoryTest>>
+participant classPathResource <<ClassPathResource>>
+participant xmlBeanFactory <<XmlBeanFactory>>
+participant xmlBeanDefinitionReader <<XmlBeanDefinitionReader>>
+
+beanFactoryTest -> classPathResource : new ClassPathResource("beanFactory.xml")
+activate classPathResource
+beanFactoryTest <-- classPathResource : resource:Resource
+deactivate classPathResource
+
+beanFactoryTest -> xmlBeanFactory : new XmlBeanFactory(resource)
+activate xmlBeanFactory
+    xmlBeanFactory -> xmlBeanDefinitionReader : loadBeanDefinitions(resource)
+    activate xmlBeanDefinitionReader
+    xmlBeanFactory <- xmlBeanDefinitionReader : loadedBeanDefinitionNum:int
+    deactivate xmlBeanDefinitionReader
+beanFactoryTest <- xmlBeanFactory : beanFactory
+deactivate xmlBeanFactory
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

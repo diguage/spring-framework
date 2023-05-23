@@ -108,6 +108,8 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	}
 
 	/**
+	 * Bean 工厂生产 Bean 实例对象。<p/>
+	 *
 	 * Obtain an object to expose from the given FactoryBean.
 	 * @param factory the FactoryBean instance
 	 * @param beanName the name of the bean
@@ -118,7 +120,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 */
 	protected Object getObjectFromFactoryBean(FactoryBean<?> factory, @Nullable Class<?> requiredType,
 			String beanName, boolean shouldPostProcess) {
-
+		// Bean 工厂是单例模式，并且 Bean 工厂缓存中存在指定名称的 Bean 实例对象
 		if (factory.isSingleton() && containsSingleton(beanName)) {
 			Boolean lockFlag = isCurrentThreadAllowedToHoldSingletonLock();
 			boolean locked;
@@ -133,6 +135,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 				if (factory instanceof SmartFactoryBean<?>) {
 					// A SmartFactoryBean may return multiple object types -> do not cache.
 					// Also, a SmartFactoryBean needs to be thread-safe -> no synchronization necessary.
+					// 调用 Bean 工厂的 getObject 方法生产指定 Bean 的实例对象
 					Object object = doGetObjectFromFactoryBean(factory, requiredType, beanName);
 					if (shouldPostProcess) {
 						object = postProcessObjectFromSingletonFactoryBean(object, beanName, locked);
@@ -144,6 +147,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 					// potentially to be called from a background thread while the main thread currently calls
 					// the same getObject() method within the singleton lock.
 					synchronized (factory) {
+						// 直接从 Bean 工厂缓存中获取指定名称的 Bean 实例对象
 						Object object = this.factoryBeanObjectCache.get(beanName);
 						if (object == null) {
 							object = doGetObjectFromFactoryBean(factory, requiredType, beanName);
@@ -172,6 +176,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 				}
 			}
 		}
+		// 调用 Bean 工厂的 getObject 方法生产指定 Bean 的实例对象
 		else {
 			Object object = doGetObjectFromFactoryBean(factory, requiredType, beanName);
 			if (shouldPostProcess) {
@@ -187,6 +192,8 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	}
 
 	/**
+	 * 调用 Bean 工厂的 getObject 方法生产指定 Bean 的实例对象。<p/>
+	 *
 	 * Obtain an object to expose from the given FactoryBean.
 	 * @param factory the FactoryBean instance
 	 * @param beanName the name of the bean
@@ -200,6 +207,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 		Object object;
 		try {
 			object = (requiredType != null && factory instanceof SmartFactoryBean<?> smartFactoryBean ?
+			        // 调用 FactoryBean 接口实现类的创建对象方法
 					smartFactoryBean.getObject(requiredType) : factory.getObject());
 		}
 		catch (FactoryBeanNotInitializedException ex) {
@@ -211,6 +219,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 
 		// Do not accept a null value for a FactoryBean that's not fully
 		// initialized yet: Many FactoryBeans just return null then.
+		// 创建出来的实例对象为 null，或者因为单例对象正在创建而返回 null
 		if (object == null) {
 			if (isSingletonCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(

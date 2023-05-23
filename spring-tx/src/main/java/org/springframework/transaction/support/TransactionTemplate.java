@@ -123,33 +123,41 @@ public class TransactionTemplate extends DefaultTransactionDefinition
 	}
 
 
+	// tag::execute[]
 	@Override
 	public <T extends @Nullable Object> T execute(TransactionCallback<T> action) throws TransactionException {
 		Assert.state(this.transactionManager != null, "No PlatformTransactionManager set");
-
+		// 内部封装好的事务管理器
 		if (this.transactionManager instanceof CallbackPreferringPlatformTransactionManager cpptm) {
 			return cpptm.execute(this, action);
-		}
+		} // 下面是需要手动获取事务，执行方法，提交事务的管理器
 		else {
+			// 1. 获取事务状态
 			TransactionStatus status = this.transactionManager.getTransaction(this);
 			T result;
 			try {
+				// 2. 执行业务逻辑
 				result = action.doInTransaction(status);
 			}
 			catch (RuntimeException | Error ex) {
 				// Transactional code threw application exception -> rollback
+				// RuntimeException 或 Error -> 回滚
+				// TODO 在 @Transactional(rollbackFor = Throwable.class) 中指定了回滚异常，怎么生效？
 				rollbackOnException(status, ex);
 				throw ex;
 			}
 			catch (Throwable ex) {
 				// Transactional code threw unexpected exception -> rollback
+				// 未知异常 -> 回滚
 				rollbackOnException(status, ex);
 				throw new UndeclaredThrowableException(ex, "TransactionCallback threw undeclared checked exception");
 			}
+			// 3. 事务提交
 			this.transactionManager.commit(status);
 			return result;
 		}
 	}
+	// end::execute[]
 
 	/**
 	 * Perform a rollback, handling rollback exceptions properly.

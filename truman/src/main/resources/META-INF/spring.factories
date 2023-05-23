@@ -1,0 +1,6 @@
+#org.springframework.context.ApplicationContextInitializer=com.diguage.truman.TrumanApplicationContextInitializer
+#org.springframework.boot.BootstrapRegistryInitializer=com.diguage.truman.TrumanBootstrapRegistryInitializer
+#org.springframework.context.ApplicationListener=com.diguage.truman.TrumanApplicationListener
+#org.springframework.boot.SpringApplicationRunListener=com.diguage.truman.TimeCostSpringApplicationRunListener
+
+org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor=com.diguage.truman.beans.TimeCostBeanPostProcessor

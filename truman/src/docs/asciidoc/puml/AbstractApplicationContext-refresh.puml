@@ -1,0 +1,91 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **""AbstractApplicationContext.refresh"" -- 重塑容器**
+
+
+actor Actor
+participant AbstractApplicationContext << (C,#ADD1B2) >>
+participant BeanFactoryPostProcessor << (I,#AB9DE1) >>
+
+Actor -> AbstractApplicationContext: ""refresh""\n重塑容器
+activate AbstractApplicationContext
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""prepareRefresh""\n准备环境
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""obtainFreshBeanFactory""\n获取BeanFactory
+  note right: 加载并解析配置文件
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""prepareBeanFactory""\n准备 ""BeanFactory""
+  note right: 忽略各种 Aware 接口的注入；同时，\n注册一些必要的 Bean，比如 ""BeanFactory""。
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""postProcessBeanFactory""\n对 ""BeanFactory"" 做后期处理
+  note right:  预留扩展点，\n目前是空实现
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""invokeBeanFactoryPostProcessors""\n调用 ""BeanFactoryPostProcessor"" 的 \n""postProcessBeanFactory"" 方法
+  activate AbstractApplicationContext #53E516
+
+    loop **遍历所有 ""BeanFactoryPostProcessor"" 实例**
+      AbstractApplicationContext -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n更新容器内 Bean 的定义（增加、删除、修改）
+      activate BeanFactoryPostProcessor
+      note left #FFAAAA: ""BeanFactoryPostProcessor""\n是 Spring 容器非常重要的扩展点！\n\n很多第三方框架集成 Spring 就是\n用的该扩展点，比如 MyBATIS。
+
+      |||
+
+      AbstractApplicationContext <- BeanFactoryPostProcessor: 完成 Bean 定义的更新
+      deactivate BeanFactoryPostProcessor
+      |||
+    end
+
+  AbstractApplicationContext -> AbstractApplicationContext
+  deactivate AbstractApplicationContext
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""registerBeanPostProcessors""\n注册 ""BeanPostProcessor""
+  note right #FFAAAA: ""BeanPostProcessor"" \n是 Spring 非常重要的扩展点！\n\n依赖注入，AOP切面生成等就是\n通过不同 ""BeanPostProcessor""\n实例来完成的。
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""initMessageSource""\n初始化 ""MessageSource""
+  note right: 国际化相关
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""initApplicationEventMulticaster""\n初始化应用事件广播器
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""onRefresh""
+  note right: 在 Web 容器中，注册\n""DispatchServlet"" 等九大组件
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""registerListeners""\n注册事件监听器
+  note right: 将 ""ApplicationListener"" 类型的 Bean 注册\n到 ""ApplicationEventMulticaster"" 中，\n后续容器启动完成事件即由此广播并处理。
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""finishBeanFactoryInitialization""\n完成预初始化
+  note right: 完成非懒加载的\n单例 Bean 实例化
+
+  |||
+
+  AbstractApplicationContext -> AbstractApplicationContext: ""finishRefresh""\n完成重塑
+  note right: 删除一些不必要的配置信息。\n最后，广播容器启动完成的消息。
+
+  |||
+
+Actor <- AbstractApplicationContext: 完成容器初始化
+deactivate AbstractApplicationContext
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

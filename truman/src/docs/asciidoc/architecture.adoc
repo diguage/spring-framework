@@ -1,0 +1,15 @@
+[#architecture-overview]
+= Spring 架构概述
+
+Spring 架构简介这章，是否考虑暂时先放下，先搞代码，然后再来总结？
+
+另外，考虑从下面几个章节开始搞起：
+
+* Spring 的前世今生（或者历史由来）
+* Spring 子模块简介
+* Spring 架构简介
+
+Spring 框架是一个分层、分模块的架构。包括了一系列的模块。如下图所示：
+
+image::images/spring-overview.png[title="Spring 架构概要图", {image_attr}]
+

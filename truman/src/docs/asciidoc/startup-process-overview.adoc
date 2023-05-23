@@ -1,0 +1,563 @@
+= 启动流程概述
+
+对于 Spring 启动流程和 Bean 的生命周期，总有一些小地方搞的不是很清楚，干脆直接通过修改代码增加日志输出，使用断点单步调试，把整个流程捋顺了一点点的。
+
+除了加载配置文件或者基础配置类外，Spring 的启动过程几乎都被封装在 `AbstractApplicationContext#refresh` 方法中，可以说弄清楚了这个方法的执行过程，就摸清楚了 Spring 启动全流程，下面的流程分析也是以这个方法为骨架来展开的。
+
+== 流程概要
+
+下面完整流程有些太复杂，所以，提炼一个简要的过程，方便糊弄面试官，哈哈哈😆
+
+. 创建容器，读取 `applicationContext.register(Config.class)` 指定的配置。
+. 准备 `BeanFactory`，注册容器本身和 `BeanFactory` 实例，以及注册环境配置信息等。
+. 执行 `BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry` 注册 `BeanDefinition`。有三点需要注意：
+.. 目前只有一个 `ConfigurationClassPostProcessor` 实现类，Spring 中大量的 Bean 都是在这一步被该类注册到容器中的。
+.. 执行顺序是 ① `PriorityOrdered` ② `Ordered` ③ 普通的顺序来执行
+.. 在执行上一步是，如果发现注册了 `BeanDefinitionRegistryPostProcessor` 类型的 Bean，就会在循环里继续调用 `postProcessBeanDefinitionRegistry` 方法。MyBATIS 和 Spring 整合的 `MapperScannerConfigurer` 类就是在这一步执行的。
+. 执行 `BeanFactoryPostProcessor#postProcessBeanFactory` 方法。目前只有一个 `ConfigurationClassPostProcessor` 实现类。
+. 注册 `CommonAnnotationBeanPostProcessor` 和 `AutowiredAnnotationBeanPostProcessor` 为 `BeanPostProcessor`。
+. 注册 `ApplicationEventMulticaster`，用于广播事件的。
+. 注册 `ApplicationListener`
+. 预加载以及注册所有非懒加载的 Bean
+
+plantuml::{includedir}/puml/AbstractApplicationContext-refresh.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/org.springframework.beans.factory.config.BeanFactoryPostProcessor.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/AbstractApplicationContext-obtainFreshBeanFactory.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/AbstractApplicationContext-prepareBeanFactory.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/AbstractApplicationContext-invokeBeanFactoryPostProcessors.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/AbstractApplicationContext-invokeBeanFactoryPostProcessors-2.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/AbstractApplicationContext-registerBeanPostProcessors.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/read-xml.puml[{diagram_attr}]
+
+
+.BeanFactoryPostProcessorOrderTest.java
+[{java_src_attr}]
+----
+include::{truman_src_dir}/context/BeanFactoryPostProcessorFailTest.java[]
+----
+
+.BeanFactoryPostProcessorOrderTest.java
+[{java_src_attr}]
+----
+include::{truman_src_dir}/context/BeanFactoryPostProcessorOkTest.java[]
+----
+
+.BeanFactoryPostProcessorOrderTest.java
+[{java_src_attr}]
+----
+include::{truman_src_dir}/context/BeanFactoryPostProcessorOrderTest.java[]
+----
+
+目前， `BeanFactoryPostProcessor` 的排序和筛选，还不支持 `@Order(value = orderFactor)`，使用 `@Order` 会被当做没有设置排序因数来处理。
+
+
+== 完整启动流程
+
+. 调用 `prepareRefresh()` 方法，初始化属性源(property source)配置。
+. 调用 `obtainFreshBeanFactory()` 获得 `ConfigurableListableBeanFactory` 对象。
+. 调用 `prepareBeanFactory`，准备 `BeanFactory`，添加必要的 Bean；添加 `ApplicationContextAwareProcessor`、`ApplicationListenerDetector` 处理器；注册环境相关的 Bean。
+. 下面通过 `AbstractApplicationContext#invokeBeanFactoryPostProcessors` 方法，开始执行 `BeanDefinitionRegistryPostProcessor` 和 `BeanFactoryPostProcessor` 相关的方法。这个方法流程起始也很简单：
++
+目前，除了用户自定义的 `BeanDefinitionRegistryPostProcessor` 和 `BeanFactoryPostProcessor` 外，Spring 内置的，只有 `ConfigurationClassPostProcessor` 一个类。所以，把这个类的实现摸清楚了，`AbstractApplicationContext#invokeBeanFactoryPostProcessors` 就可以跳过了。
++
+.. 首先，执行 `BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry` 方法，顺序如下：
+... 用户手动添加的 `BeanDefinitionRegistryPostProcessor`；
+... 实现 `PriorityOrdered` 接口的 `BeanDefinitionRegistryPostProcessor`；
+... 实现 `Ordered` 接口的 `BeanDefinitionRegistryPostProcessor`；
+... 普通 `BeanDefinitionRegistryPostProcessor`，只要发现有新加入的，就循环调用。
+.. 然后，执行 `BeanFactoryPostProcessor#postProcessBeanFactory` 方法。顺序如下：
+... 实现 `BeanDefinitionRegistryPostProcessor` 接口的类；
+... 实现 `BeanFactoryPostProcessor` 接口的类。
+. 先执行用户手动添加的 `BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry(DefaultListableBeanFactory)`
++
+关于 `BeanDefinitionRegistryPostProcessor` 的处理流程，D瓜哥在 https://www.diguage.com/post/spring-extensions-overview/#bean-factory-post-processor[Spring 扩展点概览及实践：BeanDefinitionRegistryPostProcessor^] 中有更详细的描述，不了解的朋友请参考那篇文章的介绍。
++
+. 创建 `ConfigurationClassPostProcessor` 对象，并针对该对象依次执行
+.. 构造函数
+.. `ApplicationListenerDetector#postProcessMergedBeanDefinition(RootBeanDefinition, ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)`
+.. 调用用户手动添加的 `BeanPostProcessor#postProcessBeforeInitialization` 方法
+.. `ApplicationContextAwareProcessor#postProcessBeforeInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)`
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)`
+.. 执行 `init` 方法
+.. 调用用户手动添加的 `BeanPostProcessor#postProcessAfterInitialization` 方法
+.. `ApplicationContextAwareProcessor#postProcessAfterInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)` -- 由于 `ApplicationContextAwareProcessor` 并没有该方法，所以不执行。
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)`
+. 执行 `ConfigurationClassPostProcessor#postProcessBeanDefinitionRegistry(DefaultListableBeanFactory)` -- 在这里，处理 `@Configuration`、`@Import`、 `@ImportResource`、 `@Bean` 和 。
+. 执行用户手动添加的 `BeanDefinitionRegistryPostProcessor#postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)`
+. 执行 `ConfigurationClassPostProcessor#postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)` -- 在这里给 `@Configuration` 标注的类，生成 cglib 增强后的代理类。注意：在这里，还增加了一个 `ImportAwareBeanPostProcessor` 后置处理器。
++
+因为 `ConfigurationClassPostProcessor` 是一个 `InstantiationAwareBeanPostProcessor` 实例。所以，实例化 `ConfigurationClassPostProcessor` 对象并加入到容器后。__这句话啥意思？想想再补充一下。__
++
+. 创建了 `EventListenerMethodProcessor` 实例，和创建 `ConfigurationClassPostProcessor` 时类似，依次执行 
+.. `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation` -- 目前有 `ImportAwareBeanPostProcessor`。
+.. 构造函数
+.. `MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition` -- 目前有 `ApplicationListenerDetector`。
+.. `InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation`
+.. `InstantiationAwareBeanPostProcessor#postProcessProperties` -- 目前有 `ImportAwareBeanPostProcessor`。
+.. `InstantiationAwareBeanPostProcessor#postProcessPropertyValues` -- 从 5.1 开始废弃，使用上面方法代替。
+.. `BeanPostProcessor#postProcessBeforeInitialization` -- 目前有
+... 用户手动添加的 `BeanPostProcessor`
+... `ApplicationContextAwareProcessor`
+... `ApplicationListenerDetector`
+... `ImportAwareBeanPostProcessor`
+.. `init`
+.. `BeanPostProcessor#postProcessAfterInitialization` 方法。 -- 与 `postProcessBeforeInitialization` 相同，不再赘述。
++
+有一点需要注意，上面增加了 `ImportAwareBeanPostProcessor` 实例，这里也会执行。以下都是如此，不再赘述。
++
+. 实例化用户通过 `BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry(DefaultListableBeanFactory)` 或者 `@Configuration` 添加的 `BeanFactoryPostProcessor`，以及 Spring 自己添加的 `BeanFactoryPostProcessor`。依次执行如下方法：
+.. `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation` -- 目前有 `ImportAwareBeanPostProcessor`。
+.. Bean 的构造函数
+.. `MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition` -- 目前有 `ApplicationListenerDetector`。
+.. `InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation`
+.. `InstantiationAwareBeanPostProcessor#postProcessProperties` -- 目前有 `ImportAwareBeanPostProcessor`。
+.. `InstantiationAwareBeanPostProcessor#postProcessPropertyValues` -- 从 5.1 开始废弃，使用上面方法代替。
+.. `BeanPostProcessor#postProcessBeforeInitialization` -- 目前有
+... 用户手动添加的 `BeanPostProcessor`
+... `ApplicationContextAwareProcessor`
+... `ApplicationListenerDetector`
+... `ImportAwareBeanPostProcessor`
+.. `init`
+.. `BeanPostProcessor#postProcessAfterInitialization` 方法
+. 调用上一步创建的 `BeanFactoryPostProcessor` 对象的 `postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)` 方法。这里目前包含 `EventListenerMethodProcessor` 对象。`EventListenerMethodProcessor` 是 `AnnotationConfigApplicationContext()` 初始化时，创建 `new AnnotatedBeanDefinitionReader(this)` 对象时，通过调用 `AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry)` 方法注册到容器中的。
+.. 这里调用 `EventListenerMethodProcessor#postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)`，创建 `EventListenerFactory` 对象，依次执行
++
+这个 `EventListenerFactory` 对象不重要。或者说，目前没有发现它特别重要的地方。
++
+... `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation`
+... Bean 的构造函数
+... `MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition`
+... `InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation`
+... `InstantiationAwareBeanPostProcessor#postProcessProperties`
+... `InstantiationAwareBeanPostProcessor#postProcessPropertyValues` -- 从 5.1 开始废弃，使用上面方法代替。
+... `BeanPostProcessor#postProcessBeforeInitialization`
+... `init`
+... `BeanPostProcessor#postProcessAfterInitialization` 方法
+. 到此为止，`invokeBeanFactoryPostProcessors(beanFactory)` 方法调用完毕。
+. 下面开始调用 `registerBeanPostProcessors(beanFactory)` 方法。
+. 添加 `PostProcessorRegistrationDelegate.BeanPostProcessorChecker` 实例，以下执行 `BeanPostProcessor` 方法时，都会带上。
+. 创建 `AutowiredAnnotationBeanPostProcessor`、 `CommonAnnotationBeanPostProcessor` 对象，依次执行如下方法：
+.. `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation` -- 目前有 `ImportAwareBeanPostProcessor`。
+.. 构造函数
+.. `MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition` -- 目前有 `ApplicationListenerDetector`。
+.. `InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation`
+.. `InstantiationAwareBeanPostProcessor#postProcessProperties`
+.. `InstantiationAwareBeanPostProcessor#postProcessPropertyValues` -- 从 5.1 开始废弃，使用上面方法代替。
+.. `AutowiredAnnotationBeanPostProcessor#setBeanFactory(DefaultListableBeanFactory)` -- 完成 `BeanNameAware`， `BeanClassLoaderAware`， `BeanFactoryAware` 三个 `Aware` 的注入。通过 `AbstractAutowireCapableBeanFactory#invokeAwareMethods` 方法来完成。
+.. `BeanPostProcessor#postProcessBeforeInitialization` -- 目前有
+... 用户手动添加的 `BeanPostProcessor`
+... `ApplicationContextAwareProcessor` -- 完成如下六个 `Aware` 的注入：
+.... `EnvironmentAware`
+.... `EmbeddedValueResolverAware`
+.... `ResourceLoaderAware`
+.... `ApplicationEventPublisherAware`
+.... `MessageSourceAware`
+.... `ApplicationContextAware`
+... `ApplicationListenerDetector`
+... `ImportAwareBeanPostProcessor`
+... `BeanPostProcessorChecker`
+.. `init`
+.. `BeanPostProcessor#postProcessAfterInitialization` 方法
+. 将 `AutowiredAnnotationBeanPostProcessor`、 `CommonAnnotationBeanPostProcessor` 对象注册到容器中。以下会随着 `BeanPostProcessor` 的调用，也会被执行。
+. 创建 `AnnotationAwareAspectJAutoProxyCreator` 对象，依次执行如下方法：
+.. `InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation` -- 目前有如下三个：
+... `ImportAwareBeanPostProcessor`
+... `CommonAnnotationBeanPostProcessor`
+... `AutowiredAnnotationBeanPostProcessor`
+.. 构造函数
+.. `MergedBeanDefinitionPostProcessor#postProcessMergedBeanDefinition` -- 目前有如下三个：
+... `ApplicationListenerDetector`
+... `CommonAnnotationBeanPostProcessor` -- 收集依赖信息。
+... `AutowiredAnnotationBeanPostProcessor` -- 收集依赖信息。
+.. `InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation`
+.. `InstantiationAwareBeanPostProcessor#postProcessProperties` 目前有如下三个：
+... `ImportAwareBeanPostProcessor`
+... `CommonAnnotationBeanPostProcessor` -- 完成依赖注入。
+... `AutowiredAnnotationBeanPostProcessor` -- 完成依赖注入。
+.. `InstantiationAwareBeanPostProcessor#postProcessPropertyValues` -- 从 5.1 开始废弃，使用上面方法代替。
+.. `BeanPostProcessor#postProcessBeforeInitialization` -- 目前有
+... 用户手动添加的 `BeanPostProcessor`
+... `ApplicationContextAwareProcessor` -- 完成如下六个 `Aware` 的注入：
+.... `EnvironmentAware`
+.... `EmbeddedValueResolverAware`
+.... `ResourceLoaderAware`
+.... `ApplicationEventPublisherAware`
+.... `MessageSourceAware`
+.... `ApplicationContextAware`
+... `ApplicationListenerDetector`
+... `ImportAwareBeanPostProcessor`
+... `BeanPostProcessorChecker`
+... `CommonAnnotationBeanPostProcessor`
+... `AutowiredAnnotationBeanPostProcessor`
+.. `init`
+.. `BeanPostProcessor#postProcessAfterInitialization` 方法
+. 将 `AnnotationAwareAspectJAutoProxyCreator` 对象注册到容器中。以下会随着 `BeanPostProcessor` 的调用，也会被执行。
+. 重新添加 `ApplicationListenerDetector`，其实就是换了个位置，将其调整到了最后。
+. 到此为止，`registerBeanPostProcessors(beanFactory)` 方法调用完毕。
+. 调用 `initMessageSource()` 方法，注册 `MessageSource` Bean。
+. 调用 `initApplicationEventMulticaster()` 方法，注册 `SimpleApplicationEventMulticaster` 对象，
+. 调用 `onRefresh()` 方法，这是空方法，方便做扩展。
+. 调用 `registerListeners()` 方法，但是似乎什么也没做。
+. 调用 `finishBeanFactoryInitialization(beanFactory)` 方法，这个方法中，最重要的一个操作就是实例化非懒加载的所有 Bean，在 `DefaultListableBeanFactory#preInstantiateSingletons` 中完成这些操作。目前，除了用户自己实现的，还有七个如下的 `BeanPostProcessor`：
+.. `ApplicationContextAwareProcessor`
+.. `ConfigurationClassPostProcessor`
+.. `BeanPostProcessorChecker`
+.. `AnnotationAwareAspectJAutoProxyCreator`
+.. `CommonAnnotationBeanPostProcessor`
+.. `AutowiredAnnotationBeanPostProcessor`
+.. `ApplicationListenerDetector`
++
+这部分内容放在下一篇文章 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 再展开来讲。
++
+. 调用 `finishRefresh()` -- 启动生命周期函数，广播刷新完成通知。具体如下：
+.. 清理 `Resource` 缓存（也就是被扫描到的各种类，自定义类，以及相关父类和所实现的接口）。（像是在 `ImportSelector` 中声明的类。但是没有找到添加到缓存的地方？）
+.. 注册 `LifecycleProcessor`，并通过它启动所有的 `LifecycleProcessor` 和它自身。没有看出来干什么用的？
+.. 广播 `ContextRefreshedEvent` 事件。
+.. 将 `ConfigurableApplicationContext` 注册到 `LiveBeansView` 上，如果它存在的话。
+.. 清理各种缓存
+... 启动过程中的反射相关缓存，比如 `init-method`，`Aware` 相关的方法，注入需要的字段等等；
+... `AnnotationFilter` 相关缓存；
+... 注解元素缓存和生命周期函数（`Aware`、`InitializingBean`、`BeanFactoryPostProcessor`等）缓存清空
+... 解析类型缓存清空
+... 反省结果清空
+
+
+在下一篇文章 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 中，D瓜哥将针对 Spring Bean 的整个生命周期展开详细说明。
+
+== 附录：启动日志
+
+下面是启动日志。有删减，为了方便阅读，增加了序号和层次。
+
+. 调用 `prepareRefresh()` 方法，初始化属性源(property source)配置。
+. 调用 `obtainFreshBeanFactory()` 获得 `ConfigurableListableBeanFactory` 对象。
+. 准备 `BeanFactory`，添加必要的 Bean，在 `prepareBeanFactory` 中完成。
+. 下面通过 `invokeBeanFactoryPostProcessors` 方法，开始执行 `BeanFactoryPostProcessor` 相关的方法
+
+. `LogBeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry(DefaultListableBeanFactory)` -- 用户自己手动添加的 `BeanDefinitionRegistryPostProcessor` 实例
+
+. 创建 `ConfigurationClassPostProcessor` Bean
+
+.. 构造函数
+
+.. `ApplicationListenerDetector#postProcessMergedBeanDefinition(RootBeanDefinition, ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)` -- `ApplicationListenerDetector` 实例是在 `prepareBeanFactory` 方法中，加入到容器中的。
+
+.. `LogBeanPostProcessor#postProcessBeforeInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)` -- 用户自己手动添加
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessBeforeInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)` -- 用户自己手动添加，继承默认实现。
+
+.. `ApplicationContextAwareProcessor#postProcessBeforeInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)` -- `ApplicationContextAwareProcessor` 实例是在 `prepareBeanFactory` 方法中，加入到容器中的。处理六种 `Aware` 注入。
+
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)`
+
+.. `LogBeanPostProcessor#postProcessAfterInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessAfterInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)` -- 用户自己手动添加，继承默认实现，没有任何操作。
+
+.. `ApplicationContextAwareProcessor#postProcessAfterInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)` -- 继承默认实现，没有任何操作。
+
+.. `ApplicationListenerDetector#postProcessAfterInitialization(ConfigurationClassPostProcessor, org.springframework.context.annotation.internalConfigurationAnnotationProcessor)`
+
+. `ConfigurationClassPostProcessor#postProcessBeanDefinitionRegistry(DefaultListableBeanFactory)` -- 在这里，处理 `@Configuration`、`@Import`、 `@ImportResource`、 `@Bean` 和 。
+
+. `LogBeanDefinitionRegistryPostProcessor#postProcessBeanFactory(DefaultListableBeanFactory)`
+
+. `ConfigurationClassPostProcessor#postProcessBeanFactory(DefaultListableBeanFactory)` -- 在这里给 `@Configuration` 标注的类，生成 cglib 增强后的代理类。注意：在这里，还增加了一个 `ImportAwareBeanPostProcessor` 后置处理器。
++
+因为 `ConfigurationClassPostProcessor` 是一个 `InstantiationAwareBeanPostProcessor` 实例。所以，实例化 `ConfigurationClassPostProcessor` 对象并加入到容器后。__这句话啥意思？想想再补充一下。__
++
+
+. 创建 `EventListenerMethodProcessor` Bean， Name： `org.springframework.context.event.internalEventListenerProcessor`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInstantiation(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. 构造函数
+
+.. `ApplicationListenerDetector#postProcessMergedBeanDefinition(RootBeanDefinition, EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInstantiation(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessProperties(MutablePropertyValues, EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `LogBeanPostProcessor#postProcessBeforeInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessBeforeInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `ApplicationContextAwareProcessor#postProcessBeforeInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `LogBeanPostProcessor#postProcessAfterInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessAfterInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `ApplicationContextAwareProcessor#postProcessAfterInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `ApplicationListenerDetector#postProcessAfterInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInitialization(EventListenerMethodProcessor, org.springframework.context.event.internalEventListenerProcessor)`
+
+. 创建自定义 `LogBeanFactoryPostProcessor`，通过上面 `LogBeanDefinitionRegistryPostProcessor` 的 `postProcessBeanDefinitionRegistry` 方法添加。在这一步创建用户通过 `BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry(DefaultListableBeanFactory)` 或者 `@Configuration` 添加的 `BeanFactoryPostProcessor`，以及 Spring 自己添加的 `BeanFactoryPostProcessor` 等类的相关 Bean。
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInstantiation(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ApplicationListenerDetector#postProcessMergedBeanDefinition(RootBeanDefinition, LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInstantiation(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessProperties(MutablePropertyValues, LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `LogBeanPostProcessor#postProcessBeforeInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessBeforeInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ApplicationContextAwareProcessor#postProcessBeforeInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `LogBeanPostProcessor#postProcessAfterInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessAfterInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ApplicationContextAwareProcessor#postProcessAfterInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ApplicationListenerDetector#postProcessAfterInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInitialization(LogBeanFactoryPostProcessor, LogBeanFactoryPostProcessor)`
+
+. 这里会调用上一步创建的 `BeanFactoryPostProcessor` 对象的 `postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)` 方法。这里目前包含 `EventListenerMethodProcessor` 对象。`EventListenerMethodProcessor` 是 `AnnotationConfigApplicationContext()` 初始化时，创建 `new AnnotatedBeanDefinitionReader(this)` 对象时，通过调用 `AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry)` 方法注册到容器中的。
+
+. `LogBeanFactoryPostProcessor#postProcessBeanFactory(DefaultListableBeanFactory)`
+
+. 到此为止，`invokeBeanFactoryPostProcessors(beanFactory)` 方法调用完毕。
+
+. 下面开始调用 `registerBeanPostProcessors(beanFactory)` 方法。
+
+. 添加 `PostProcessorRegistrationDelegate.BeanPostProcessorChecker` 实例，以下执行 `BeanPostProcessor` 方法时，都会带上。
+
+. 创建 `AutowiredAnnotationBeanPostProcessor` Bean，Name： `org.springframework.context.annotation.internalAutowiredAnnotationProcessor`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInstantiation(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ApplicationListenerDetector#postProcessMergedBeanDefinition(RootBeanDefinition, AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInstantiation(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessProperties(MutablePropertyValues, AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `AutowiredAnnotationBeanPostProcessor#setBeanFactory(DefaultListableBeanFactory)`
+
+.. `LogBeanPostProcessor#postProcessBeforeInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessBeforeInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ApplicationContextAwareProcessor#postProcessBeforeInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `BeanPostProcessorChecker#postProcessBeforeInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `LogBeanPostProcessor#postProcessAfterInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessAfterInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ApplicationContextAwareProcessor#postProcessAfterInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ApplicationListenerDetector#postProcessAfterInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+.. `BeanPostProcessorChecker#postProcessAfterInitialization(AutowiredAnnotationBeanPostProcessor, org.springframework.context.annotation.internalAutowiredAnnotationProcessor)`
+
+. 创建 `CommonAnnotationBeanPostProcessor` Bean，Name： `org.springframework.context.annotation.internalCommonAnnotationProcessor`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInstantiation(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ApplicationListenerDetector#postProcessMergedBeanDefinition(RootBeanDefinition, CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInstantiation(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessProperties(MutablePropertyValues, CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `LogBeanPostProcessor#postProcessBeforeInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessBeforeInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ApplicationContextAwareProcessor#postProcessBeforeInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `BeanPostProcessorChecker#postProcessBeforeInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `LogBeanPostProcessor#postProcessAfterInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessAfterInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ApplicationContextAwareProcessor#postProcessAfterInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ApplicationListenerDetector#postProcessAfterInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+.. `BeanPostProcessorChecker#postProcessAfterInitialization(CommonAnnotationBeanPostProcessor, org.springframework.context.annotation.internalCommonAnnotationProcessor)`
+
+. 创建 `AnnotationAwareAspectJAutoProxyCreator`，Name： `org.springframework.aop.config.internalAutoProxyCreator`。也许是因为配置了 `@EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)`。__这个再探究竟？__
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInstantiation(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessBeforeInstantiation(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessBeforeInstantiation(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ApplicationListenerDetector#postProcessMergedBeanDefinition(RootBeanDefinition, AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessMergedBeanDefinition(RootBeanDefinition, AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessMergedBeanDefinition(RootBeanDefinition, AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInstantiation(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessAfterInstantiation(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessAfterInstantiation(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ImportAwareBeanPostProcessor#postProcessProperties(MutablePropertyValues, AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessProperties(MutablePropertyValues, AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessProperties(MutablePropertyValues, AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `LogBeanPostProcessor#postProcessBeforeInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessBeforeInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ApplicationContextAwareProcessor#postProcessBeforeInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `BeanPostProcessorChecker#postProcessBeforeInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessBeforeInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessBeforeInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `LogBeanPostProcessor#postProcessAfterInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessAfterInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ApplicationContextAwareProcessor#postProcessAfterInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ApplicationListenerDetector#postProcessAfterInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `BeanPostProcessorChecker#postProcessAfterInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessAfterInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessAfterInitialization(AnnotationAwareAspectJAutoProxyCreator, org.springframework.aop.config.internalAutoProxyCreator)`
+
+. 预加载 `Config`、 `UserService` 等 Bean。下面以 `UserService` 为例：
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInstantiation(UserService, UserService)`
+
+.. `AnnotationAwareAspectJAutoProxyCreator#postProcessBeforeInstantiation(UserService, UserService)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessBeforeInstantiation(UserService, UserService)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessBeforeInstantiation(UserService, UserService)`
+
+.. 构造函数
+
+.. `CommonAnnotationBeanPostProcessor#postProcessMergedBeanDefinition(RootBeanDefinition, UserService, UserService)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessMergedBeanDefinition(RootBeanDefinition, UserService, UserService)`
+
+.. `ApplicationListenerDetector#postProcessMergedBeanDefinition(RootBeanDefinition, UserService, UserService)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInstantiation(UserService, UserService)`
+
+.. `AnnotationAwareAspectJAutoProxyCreator#postProcessAfterInstantiation(UserService, UserService)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessAfterInstantiation(UserService, UserService)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessAfterInstantiation(UserService, UserService)`
+
+.. `ImportAwareBeanPostProcessor#postProcessProperties(MutablePropertyValues, UserService, UserService)`
+
+.. `AnnotationAwareAspectJAutoProxyCreator#postProcessProperties(MutablePropertyValues, UserService, UserService)`
+
+.. `AnnotationAwareAspectJAutoProxyCreator#postProcessPropertyValues(MutablePropertyValues, PropertyDescriptor[], UserService, UserService)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessProperties(MutablePropertyValues, UserService, UserService)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessProperties(MutablePropertyValues, UserService, UserService)`
+
+.. `UserService#setBeanFactory(DefaultListableBeanFactory)`
+
+.. `LogBeanPostProcessor#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `ApplicationContextAwareProcessor#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `UserService#setApplicationContext(AnnotationConfigApplicationContext)`
+
+.. `ImportAwareBeanPostProcessor#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `BeanPostProcessorChecker#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `AnnotationAwareAspectJAutoProxyCreator#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `ApplicationListenerDetector#postProcessBeforeInitialization(UserService, UserService)`
+
+.. `UserService#afterPropertiesSet()`
+
+.. `UserService#init()`
+
+.. `LogBeanPostProcessor#postProcessAfterInitialization(UserService, UserService)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessAfterInitialization(UserService, UserService)`
+
+.. `ApplicationContextAwareProcessor#postProcessAfterInitialization(UserService, UserService)`
+
+.. `ImportAwareBeanPostProcessor#postProcessAfterInitialization(UserService, UserService)`
+
+.. `BeanPostProcessorChecker#postProcessAfterInitialization(UserService, UserService)`
+
+.. `AnnotationAwareAspectJAutoProxyCreator#postProcessAfterInitialization(UserService, UserService)`
+
+.. `CommonAnnotationBeanPostProcessor#postProcessAfterInitialization(UserService, UserService)`
+
+.. `AutowiredAnnotationBeanPostProcessor#postProcessAfterInitialization(UserService, UserService)`
+
+.. `ApplicationListenerDetector#postProcessAfterInitialization(UserService, UserService)`
+
+. 销毁 Bean，`beanFactory.destroyBean(bean)`
+
+.. `LogDestructionAwareBeanPostProcessor#postProcessBeforeDestruction(UserService, UserService)`
+
+.. `UserService#destroy()`
+
+不知道有没有人关注这个附录日志，这里再重复一遍：在下一篇文章 https://www.diguage.com/post/spring-bean-lifecycle-overview/[Spring Bean 生命周期概述^] 中，D瓜哥将针对 Spring Bean 的整个生命周期展开详细说明。
+

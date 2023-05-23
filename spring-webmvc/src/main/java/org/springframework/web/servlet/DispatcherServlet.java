@@ -65,6 +65,9 @@ import org.springframework.web.util.ServletRequestPathUtils;
 import org.springframework.web.util.WebUtils;
 
 /**
+ * DispatcherServlet 是 SpringMVC 中的前端控制器(Front Controller),
+ * 负责接收 Request 并将 Request 转发给对应的处理组件。<p/>
+ * 
  * Central dispatcher for HTTP request handlers/controllers, for example, for web UI controllers
  * or HTTP-based remote service exporters. Dispatches to registered handlers for processing
  * a web request, providing convenient mapping and exception handling facilities.
@@ -439,13 +442,21 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * <p>May be overridden in subclasses in order to initialize further strategy objects.
 	 */
 	protected void initStrategies(ApplicationContext context) {
+		// 1. 多文件上传组件
 		initMultipartResolver(context);
+		// 2. 处理国际化，初始化本地语言环境
 		initLocaleResolver(context);
+		// 4. 初始化 HandlerMapping
 		initHandlerMappings(context);
+		// 5. 初始化参数适配器
 		initHandlerAdapters(context);
+		// 6. 初始化异常拦截器
 		initHandlerExceptionResolvers(context);
+		// 7. 初始化视图预处理器
 		initRequestToViewNameTranslator(context);
+		// 8. 初始化视图转换器
 		initViewResolvers(context);
+		// 9. 初始化 Flash 管理器
 		initFlashMapManager(context);
 	}
 
@@ -528,6 +539,7 @@ public class DispatcherServlet extends FrameworkServlet {
 
 		// Ensure we have at least one HandlerMapping, by registering
 		// a default HandlerMapping if no other mappings are found.
+		// 通过配置文件中的配置信息得到 handlerMappings
 		if (this.handlerMappings == null) {
 			this.handlerMappings = getDefaultStrategies(context, HandlerMapping.class);
 			if (logger.isTraceEnabled()) {
@@ -769,6 +781,9 @@ public class DispatcherServlet extends FrameworkServlet {
 				// Load default strategy implementations from properties file.
 				// This is currently strictly internal and not meant to be customized
 				// by application developers.
+				/**
+				 * 从属性文件加载默认策略实现：从 DEFAULT_STRATEGIES_PATH 文件中奶出所有的配置（一共8个）
+				 */
 				ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, DispatcherServlet.class);
 				defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
 			}
@@ -937,6 +952,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		HandlerExecutionChain mappedHandler = null;
 		boolean multipartRequestParsed = false;
 
+		// 异步编程
 		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
 
 		try {
@@ -944,22 +960,29 @@ public class DispatcherServlet extends FrameworkServlet {
 			Exception dispatchException = null;
 
 			try {
+				// 检查请求是否有文件上传操作
 				processedRequest = checkMultipart(request);
 				multipartRequestParsed = (processedRequest != request);
 
 				// Determine handler for the current request.
+				// 确定当前请求的处理程序。这行代码牵涉出来的问题最核心
+				// 推断 Controller 的类型
 				mappedHandler = getHandler(processedRequest);
 				if (mappedHandler == null) {
 					noHandlerFound(processedRequest, response);
 					return;
 				}
 
+				// 前置拦截器处理
 				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
 					return;
 				}
 
 				// Determine handler adapter and invoke the handler.
+				//  如果 HandlerExecutionChain 是一个 Bean， appendHandler.getHandler() 返回的是一个对象（TODO 需要证明）
+				//  如果 HandlerExecutionChain 是一个 Bean， appendHandler.getHandler() 返回的是一个method
 				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+				// 可以理解为反射调用方法
 				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
 				if (asyncManager.isConcurrentHandlingStarted()) {

@@ -16,6 +16,8 @@
 
 package org.springframework.beans.factory.config;
 
+import com.diguage.labs.Printers;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -53,6 +55,11 @@ public class DeprecatedBeanWarner implements BeanFactoryPostProcessor {
 
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		Printers.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		if (isLogEnabled()) {
 			String[] beanNames = beanFactory.getBeanDefinitionNames();
 			for (String beanName : beanNames) {

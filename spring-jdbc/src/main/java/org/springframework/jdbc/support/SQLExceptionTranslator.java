@@ -23,6 +23,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
 
 /**
+ * 异常转换接口，下面有两个实现：
+ *
  * Strategy interface for translating between {@link SQLException SQLExceptions}
  * and Spring's data access strategy-agnostic {@link DataAccessException}
  * hierarchy.

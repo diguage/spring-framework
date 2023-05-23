@@ -151,34 +151,51 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	}
 
 
+  // tag::proceed[]
 	@Override
 	public @Nullable Object proceed() throws Throwable {
 		// We start with an index of -1 and increment early.
+		// 如果执行到链条的末尾， 则直接调用连接点方法 即直接调用目标方法
 		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
 			return invokeJoinpoint();
 		}
 
+		// 获取集合中的MethodInterceptor
 		Object interceptorOrInterceptionAdvice =
 				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+		// 如果是InterceptorAndDynamicMethodMatcher类型（动态匹配）
 		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher dm) {
 			// Evaluate dynamic method matcher here: static part will already have
 			// been evaluated and found to match.
+			// 如果要动态匹配 joinPoint
 			Class<?> targetClass = (this.targetClass != null ? this.targetClass : this.method.getDeclaringClass());
+			// 动态匹配：运行时参数是否满足匹配条件
+			// 这里每一次都去匹配是否适用于这个目标方法
 			if (dm.matcher().matches(this.method, targetClass, this.arguments)) {
+				// 如果匹配则直接调用MethodInterceptor的invoke方法
+				// 注意这里传入的参数是this，我们下面看一下ReflectiveMethodInvocation的类型
 				return dm.interceptor().invoke(this);
 			}
 			else {
 				// Dynamic matching failed.
 				// Skip this interceptor and invoke the next in the chain.
+				// 动态匹配失败时，略过当前 Interceptor，调用下一个 Interceptor
+				// 如果不适用于此目标方法，则继续执行下一链条
+				// 递归调用
 				return proceed();
 			}
 		}
 		else {
 			// It's an interceptor, so we just invoke it: The pointcut will have
 			// been evaluated statically before this object was constructed.
+			// 说明是适用于此目标方法的，直接调用MethodInterceptor的invoke方法
+			// 传入this即ReflectiveMethodInvocation实例
+			// 传入this进入 这样就可以形成一个调用的链条了
+			// 执行当前 Interceptor
 			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
 		}
 	}
+  // end::proceed[]
 
 	/**
 	 * Invoke the joinpoint using reflection.

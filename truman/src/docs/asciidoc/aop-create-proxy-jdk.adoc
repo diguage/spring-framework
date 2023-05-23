@@ -1,0 +1,71 @@
+= 创建代理（一）：动态代理
+
+https://www.diguage.com/post/spring-aop-bootstrap/[Spring AOP 源码分析：入门] 中，梳理出来了 Spring AOP 的入口。上一篇文章 https://www.diguage.com/post/spring-aop-get-advices/[Spring AOP 源码分析：获得通知] 中着重介绍了如何获取通知。接着上一篇文章，这篇文章介绍一下如何创建代理。
+
+.`AbstractAutoProxyCreator#createProxy`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/autoproxy/AbstractAutoProxyCreator.java[tag=createProxy]
+----
+
+.`ProxyFactory#getProxy(ClassLoader)`
+[{java_src_attr}]
+----
+public Object getProxy(@Nullable ClassLoader classLoader) {
+  // 1、创建JDK方式的AOP代理或者CGLib方式的AOP代理
+  // 2、调用具体的AopProxy来创建Proxy代理对象
+  return createAopProxy().getProxy(classLoader);
+}
+----
+
+在 `createAopProxy()` 方法中就不再列出，因为 `AopProxyFactory` 接口只有一个实现类 `DefaultAopProxyFactory`。所以，直接来看看 `getProxy(classLoader)` 方法：
+
+.`DefaultAopProxyFactory#createAopProxy`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/DefaultAopProxyFactory.java[tag=createAopProxy]
+----
+
+到这里就可以清楚看到
+
+== `JdkDynamicAopProxy`
+
+`JdkDynamicAopProxy` 类如其名，就是通过 JDK 的动态代理来生成代理类的。对 JDK 动态代理比较熟悉的话，应该清楚：代理类的增强是通过实现 `InvocationHandler` 接口，在其 `invoke` 方法中增加增强逻辑。而 `JdkDynamicAopProxy` 正好实现了 `InvocationHandler` 接口，所以，在其 `invoke` 方法中封装了对 AOP 的 Advice(通知/增强) 调用链。
+
+.`JdkDynamicAopProxy`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/JdkDynamicAopProxy.java[tag=getProxy]
+
+include::{aop_src_dir}/framework/JdkDynamicAopProxy.java[tag=getProxy-ClassLoader]
+----
+
+由于 `JdkDynamicAopProxy` 实现了 `InvocationHandler`。所以，重点就是 `invoke()` 方法。来看一下：
+
+
+.`JdkDynamicAopProxy#invoke`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/JdkDynamicAopProxy.java[tag=invoke]
+----
+
+从上面高亮代码部分可以看出，增强调用链是在 `this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass)` 方法中组装的。实际上，它是委托给 `DefaultAdvisorChainFactory#getInterceptorsAndDynamicInterceptionAdvice` 方法来完成的。来看一下这个代码：
+
+.`DefaultAdvisorChainFactory#getInterceptorsAndDynamicInterceptionAdvice`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/DefaultAdvisorChainFactory.java[tag=getInterceptorsAndDynamicInterceptionAdvice]
+----
+
+通知的执行则是委托给 `ReflectiveMethodInvocation#proceed` 来执行的。具体实现如下：
+
+.`ReflectiveMethodInvocation#proceed`
+[{java_src_attr}]
+----
+include::{aop_src_dir}/framework/ReflectiveMethodInvocation.java[tag=proceed]
+----
+
+`ReflectiveMethodInvocation` 通过递归调用 `proceed()` 方法，来实现链式调用的。因为链本身是一个 `List` 对象，每次递归调用时，只需要推进其下标就可以实现链式调用的效果。
+
+贴代码太多，篇幅有又老长了。关于利用 cglib 创建代理的过程，留到下一篇文章来重点介绍： https://www.diguage.com//post/spring-aop-create-proxy-cglib/[Spring AOP 源码分析：创建代理（二）^]。
+

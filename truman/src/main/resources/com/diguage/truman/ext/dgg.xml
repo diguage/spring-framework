@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:dgg="https://www.diguage.com/schema/user"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+	                       https://www.springframework.org/schema/beans/spring-beans.xsd
+				           https://www.diguage.com/schema/user
+				           https://www.diguage.com/schema/user.xsd
+                           http://www.springframework.org/schema/aop
+                           https://www.springframework.org/schema/aop/spring-aop.xsd">
+	<dgg:user id="dggBean" userName="D瓜哥" email="dgg@diguage.com"/>
+	<aop:aspectj-autoproxy proxy-target-class="true"/>
+</beans>

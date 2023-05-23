@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Properties;
 
+import com.diguage.labs.Printers;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.core.Ordered;
@@ -76,6 +78,11 @@ public abstract class PropertyResourceConfigurer extends PropertiesLoaderSupport
 	 */
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		Printers.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		try {
 			Properties mergedProps = mergeProperties();
 

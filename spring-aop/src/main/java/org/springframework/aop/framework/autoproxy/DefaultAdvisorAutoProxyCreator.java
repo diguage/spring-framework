@@ -21,6 +21,9 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.BeanNameAware;
 
 /**
+ * 将 `DefaultAdvisorAutoProxyCreator` 注册到容器后，它会自动搜寻容器内的所有 `Advisor`，
+ * 然后根据各个 `Advisor` 所提供的拦截信息，为符合条件的容器中的目标对象生成相应的代理对象。
+ *
  * {@code BeanPostProcessor} implementation that creates AOP proxies based on all
  * candidate {@code Advisor}s in the current {@code BeanFactory}. This class is
  * completely generic; it contains no special code to handle any particular aspects,

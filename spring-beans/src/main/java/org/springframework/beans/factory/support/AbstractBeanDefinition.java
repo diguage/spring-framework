@@ -180,6 +180,14 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	private int dependencyCheck = DEPENDENCY_CHECK_NONE;
 
+	/**
+	 * 该属性在 spring-beans.xsd 的 depends-on 中有详细说明。
+	 * 它是存必须在本 Bean 之前创建的 Bean，不是属性依赖，是时间先后依赖。
+	 *
+	 * {@link DefaultSingletonBeanRegistry#dependentBeanMap} 和
+	 * {@link DefaultSingletonBeanRegistry#dependenciesForBeanMap}
+	 * 保存了这个 dependsOn 依赖关系的正向关系和反向关系。
+	 */
 	private String @Nullable [] dependsOn;
 
 	private boolean autowireCandidate = true;

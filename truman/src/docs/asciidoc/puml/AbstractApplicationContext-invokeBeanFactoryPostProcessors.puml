@@ -1,0 +1,238 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **AbstractApplicationContext.invokeBeanFactoryPostProcessors -- 调用 ""BeanFactoryPostProcessor""**
+
+
+actor Actor
+participant AbstractApplicationContext << (C,#ADD1B2) >>
+participant PostProcessorRegistrationDelegate << (C,#ADD1B2) >>
+participant BeanDefinitionRegistryPostProcessor << (I,#AB9DE1) >>
+note over BeanDefinitionRegistryPostProcessor: ""BeanDefinitionRegistryPostProcessor"" \n 是 ""BeanFactoryPostProcessor"" 的子接口。
+participant List << (I,#AB9DE1) >>
+participant ListableBeanFactory << (I,#AB9DE1) >>
+participant BeanFactoryPostProcessor << (I,#AB9DE1) >>
+
+Actor -> AbstractApplicationContext: ""refresh""\n重塑容器
+activate AbstractApplicationContext
+
+    AbstractApplicationContext -> AbstractApplicationContext: ""invokeBeanFactoryPostProcessors""\n调用 ""BeanFactoryPostProcessor""
+    activate AbstractApplicationContext
+
+        AbstractApplicationContext -> PostProcessorRegistrationDelegate: ""invokeBeanFactoryPostProcessors""\n调用 ""BeanFactoryPostProcessor""
+        activate PostProcessorRegistrationDelegate
+            loop 所有的 ""BeanFactoryPostProcessor""
+                alt #CFFCED 实现 ""BeanDefinitionRegistryPostProcessor"" 接口
+                    PostProcessorRegistrationDelegate -> BeanDefinitionRegistryPostProcessor: ""postProcessBeanDefinitionRegistry""\n调用 ""BeanFactoryPostProcessor""
+                    activate BeanDefinitionRegistryPostProcessor
+                    note over PostProcessorRegistrationDelegate,BeanDefinitionRegistryPostProcessor: 只遍历实现 ""BeanDefinitionRegistryPostProcessor"" 的 ""BeanFactoryPostProcessor""
+                    PostProcessorRegistrationDelegate <- BeanDefinitionRegistryPostProcessor
+                    deactivate BeanDefinitionRegistryPostProcessor
+
+                    |||
+
+                    PostProcessorRegistrationDelegate -> List: ""add""\n添加元素
+                    activate List
+                    note over PostProcessorRegistrationDelegate,List: 添加到 ""registryProcessors"" 集合中
+                    PostProcessorRegistrationDelegate <- List
+                    deactivate List
+                    |||
+                else #FFF7FA 没有实现 ""BeanDefinitionRegistryPostProcessor"" 接口
+                    PostProcessorRegistrationDelegate -> List: ""add""\n添加元素
+                    activate List
+                    note over PostProcessorRegistrationDelegate,List: 添加到 ""regularPostProcessors"" 集合中
+                    PostProcessorRegistrationDelegate <- List
+                    deactivate List
+                    |||
+                end
+            end
+
+            |||
+            ==首先，调用实现了 ""PriorityOrdered"" 接口的 ""BeanDefinitionRegistryPostProcessors"" 的 ""postProcessBeanDefinitionRegistry"" 方法 ==
+            |||
+
+            PostProcessorRegistrationDelegate -> ListableBeanFactory: ""getBeanNamesForType""\n获取指定类型的 Bean 名称
+            activate ListableBeanFactory
+            note over PostProcessorRegistrationDelegate,ListableBeanFactory: 获取类型为 ""BeanDefinitionRegistryPostProcessor"" 的 Bean 名称
+            PostProcessorRegistrationDelegate <- ListableBeanFactory
+            deactivate ListableBeanFactory
+
+            |||
+
+            loop 上述获取的 Bean 名称
+                PostProcessorRegistrationDelegate -> ListableBeanFactory: ""isTypeMatch""\n检查 Bean 是否为指定类型
+                activate ListableBeanFactory
+                note over PostProcessorRegistrationDelegate,ListableBeanFactory: 筛选出实现了 ""PriorityOrdered"" 接口的 ""BeanFactoryPostProcessor""，供后面优先调用。
+                PostProcessorRegistrationDelegate <- ListableBeanFactory
+                deactivate ListableBeanFactory
+            end
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n对上述筛选出来的 Bean 进行排序
+            activate PostProcessorRegistrationDelegate
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            PostProcessorRegistrationDelegate -> List: ""addAll""\n将上述 Bean 全部添加到 ""registryProcessors"" 集合中
+            activate List
+            note over PostProcessorRegistrationDelegate,List: 添加到 ""registryProcessors"" 集合中
+            PostProcessorRegistrationDelegate <- List
+            deactivate List
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""invokeBeanDefinitionRegistryPostProcessors""\n调用 ""BeanDefinitionRegistryPostProcessor""
+            activate PostProcessorRegistrationDelegate
+                loop 上述筛选出来的所有 ""BeanFactoryPostProcessor""
+                  PostProcessorRegistrationDelegate -> BeanDefinitionRegistryPostProcessor: ""postProcessBeanDefinitionRegistry""\n调用 ""BeanFactoryPostProcessor""
+                  activate BeanDefinitionRegistryPostProcessor
+                  note over PostProcessorRegistrationDelegate,BeanDefinitionRegistryPostProcessor: 只遍历实现 ""PriorityOrdered"" 接口的 ""BeanDefinitionRegistryPostProcessor"" Bean
+                  PostProcessorRegistrationDelegate <- BeanDefinitionRegistryPostProcessor
+                  deactivate BeanDefinitionRegistryPostProcessor
+                end
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+            ==其次，调用实现了 ""Ordered"" 接口的 ""BeanDefinitionRegistryPostProcessors"" 的 ""postProcessBeanDefinitionRegistry"" 方法 ==
+            |||
+
+            PostProcessorRegistrationDelegate -> ListableBeanFactory: ""getBeanNamesForType""\n获取指定类型的 Bean 名称
+            activate ListableBeanFactory
+            note over PostProcessorRegistrationDelegate,ListableBeanFactory: 获取类型为 ""BeanDefinitionRegistryPostProcessor"" 的 Bean 名称
+            PostProcessorRegistrationDelegate <- ListableBeanFactory
+            deactivate ListableBeanFactory
+
+            |||
+
+            loop 上述获取的 Bean 名称
+                PostProcessorRegistrationDelegate -> ListableBeanFactory: ""isTypeMatch""\n检查 Bean 是否为指定类型
+                activate ListableBeanFactory
+                note over PostProcessorRegistrationDelegate,ListableBeanFactory: 筛选出实现了 ""Ordered"" 接口的 ""BeanFactoryPostProcessor""，供后面优先调用。
+                PostProcessorRegistrationDelegate <- ListableBeanFactory
+                deactivate ListableBeanFactory
+            end
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n对上述筛选出来的 Bean 进行排序
+            activate PostProcessorRegistrationDelegate
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            PostProcessorRegistrationDelegate -> List: ""addAll""\n将上述 Bean 全部添加到 ""registryProcessors"" 集合中
+            activate List
+            note over PostProcessorRegistrationDelegate,List: 添加到 ""registryProcessors"" 集合中
+            PostProcessorRegistrationDelegate <- List
+            deactivate List
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""invokeBeanDefinitionRegistryPostProcessors""\n调用 ""BeanDefinitionRegistryPostProcessor""
+            activate PostProcessorRegistrationDelegate
+                loop 上述筛选出来的所有 ""BeanFactoryPostProcessor""
+                  PostProcessorRegistrationDelegate -> BeanDefinitionRegistryPostProcessor: ""postProcessBeanDefinitionRegistry""\n调用 ""BeanFactoryPostProcessor""
+                  activate BeanDefinitionRegistryPostProcessor
+                  note over PostProcessorRegistrationDelegate,BeanDefinitionRegistryPostProcessor: 只遍历实现 ""PriorityOrdered"" 接口的 ""BeanDefinitionRegistryPostProcessor"" Bean
+                  PostProcessorRegistrationDelegate <- BeanDefinitionRegistryPostProcessor
+                  deactivate BeanDefinitionRegistryPostProcessor
+                end
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+            ==最后，调用剩余的 ""BeanDefinitionRegistryPostProcessors"" 的 ""postProcessBeanDefinitionRegistry"" 方法==
+            |||
+            loop 有新创建出来的 ""BeanDefinitionRegistryPostProcessor"" 就遍历
+                PostProcessorRegistrationDelegate -> ListableBeanFactory: ""getBeanNamesForType""\n获取指定类型的 Bean 名称
+                activate ListableBeanFactory
+                note over PostProcessorRegistrationDelegate,ListableBeanFactory: 获取类型为 ""BeanDefinitionRegistryPostProcessor"" 的 Bean 名称
+                PostProcessorRegistrationDelegate <- ListableBeanFactory
+                deactivate ListableBeanFactory
+
+                |||
+
+                loop 上述获取的 Bean 名称
+                    PostProcessorRegistrationDelegate -> ListableBeanFactory: ""isTypeMatch""\n检查 Bean 是否为指定类型
+                    activate ListableBeanFactory
+                    note over PostProcessorRegistrationDelegate,ListableBeanFactory: 筛选出实现了 ""Ordered"" 接口的 ""BeanFactoryPostProcessor""，供后面优先调用。
+                    PostProcessorRegistrationDelegate <- ListableBeanFactory
+                    deactivate ListableBeanFactory
+                end
+
+                |||
+
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""sortPostProcessors""\n对上述筛选出来的 Bean 进行排序
+                activate PostProcessorRegistrationDelegate
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+                deactivate PostProcessorRegistrationDelegate
+
+                |||
+
+                PostProcessorRegistrationDelegate -> List: ""addAll""\n将上述 Bean 全部添加到 ""registryProcessors"" 集合中
+                activate List
+                note over PostProcessorRegistrationDelegate,List: 添加到 ""registryProcessors"" 集合中
+                PostProcessorRegistrationDelegate <- List
+                deactivate List
+
+                |||
+
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""invokeBeanDefinitionRegistryPostProcessors""\n调用 ""BeanDefinitionRegistryPostProcessor""
+                activate PostProcessorRegistrationDelegate
+                    loop 上述筛选出来的所有 ""BeanFactoryPostProcessor""
+                      PostProcessorRegistrationDelegate -> BeanDefinitionRegistryPostProcessor: ""postProcessBeanDefinitionRegistry""\n调用 ""BeanFactoryPostProcessor""
+                      activate BeanDefinitionRegistryPostProcessor
+                      note over PostProcessorRegistrationDelegate,BeanDefinitionRegistryPostProcessor: 只遍历实现 ""PriorityOrdered"" 接口的 ""BeanDefinitionRegistryPostProcessor"" Bean
+                      PostProcessorRegistrationDelegate <- BeanDefinitionRegistryPostProcessor
+                      deactivate BeanDefinitionRegistryPostProcessor
+                    end
+                PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+                deactivate PostProcessorRegistrationDelegate
+            end
+
+            |||
+            ==结尾，调用 ""BeanFactoryPostProcessor"" 的 ""postProcessBeanFactory"" 方法 ==
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""invokeBeanFactoryPostProcessors""\n调用 ""BeanFactoryPostProcessor""\n 的 ""postProcessBeanFactory""
+            activate PostProcessorRegistrationDelegate
+                loop 遍历 ""registryProcessors""
+                  PostProcessorRegistrationDelegate -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n调用 ""BeanFactoryPostProcessor""\n 的 ""postProcessBeanFactory""
+                  activate BeanFactoryPostProcessor
+                  note over PostProcessorRegistrationDelegate,BeanFactoryPostProcessor: 遍历 ""registryProcessors""
+                  PostProcessorRegistrationDelegate <- BeanFactoryPostProcessor
+                  deactivate BeanFactoryPostProcessor
+                end
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+            |||
+
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate: ""invokeBeanFactoryPostProcessors""\n调用 ""BeanFactoryPostProcessor""\n 的 ""postProcessBeanFactory""
+            activate PostProcessorRegistrationDelegate
+                loop 遍历 ""regularPostProcessors""
+                  PostProcessorRegistrationDelegate -> BeanFactoryPostProcessor: ""postProcessBeanFactory""\n调用 ""BeanFactoryPostProcessor""\n 的 ""postProcessBeanFactory""
+                  activate BeanFactoryPostProcessor
+                  note over PostProcessorRegistrationDelegate,BeanFactoryPostProcessor: 遍历 ""regularPostProcessors""
+                  PostProcessorRegistrationDelegate <- BeanFactoryPostProcessor
+                  deactivate BeanFactoryPostProcessor
+                end
+            PostProcessorRegistrationDelegate -> PostProcessorRegistrationDelegate
+            deactivate PostProcessorRegistrationDelegate
+
+        AbstractApplicationContext <- PostProcessorRegistrationDelegate
+        deactivate PostProcessorRegistrationDelegate
+
+    AbstractApplicationContext -> AbstractApplicationContext
+    deactivate AbstractApplicationContext
+
+Actor <- AbstractApplicationContext: 完成容器初始化
+deactivate AbstractApplicationContext
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

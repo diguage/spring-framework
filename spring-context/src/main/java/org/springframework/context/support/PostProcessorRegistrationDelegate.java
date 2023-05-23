@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
+import com.diguage.labs.Printers;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jspecify.annotations.Nullable;
@@ -105,8 +107,16 @@ final class PostProcessorRegistrationDelegate {
 			List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
 
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
+			// getBeanNamesForType 根据 bean 的类型获取 bean 的名字
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
+			// 这个地方可以得到一个 BeanFactoryPostProcessor，因为 Spring 默认在最开始自己注册的。
+			// 为什么要在最开始注册这个呢？
+			// 而这些功能都是需要在 Spring 工厂初始化完成之前执行
+			// 要么在工厂初始化之前，要么在工厂初始化之中，反正不能在之后
+			// 因为如果在之后没有意义，因为那个时候已经需要使用工厂了
+			// 所以，Spring 一开始就注册了一个 BeanFactoryPostProcessor，用于干预 Spring Factory 的实例化过程
+			// 在这个地方打断点，就可以知道这个类是 ConfigurationClassPostProcessor
 			for (String ppName : postProcessorNames) {
 				if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
@@ -133,6 +143,9 @@ final class PostProcessorRegistrationDelegate {
 
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
 			boolean reiterate = true;
+			// 这个地方为什么使用一个循环来调用：
+			// 在添加 BeanDefinition 的过程中，有可能有新加入的 BeanDefinitionRegistryPostProcessor 类型的 Bean，
+			// 所以要递归调用这个过程，以求把所有的 BeanDefinitionRegistryPostProcessor 实例都执行到。
 			while (reiterate) {
 				reiterate = false;
 				postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
@@ -208,6 +221,9 @@ final class PostProcessorRegistrationDelegate {
 		beanFactory.clearMetadataCache();
 	}
 
+	/**
+	 * 实例化并注册 BeanPostProcessor 后置处理器
+	 */
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
@@ -283,11 +299,13 @@ final class PostProcessorRegistrationDelegate {
 		registerBeanPostProcessors(beanFactory, nonOrderedPostProcessors);
 
 		// Finally, re-register all internal BeanPostProcessors.
+		// TODO 为什么再次注册所有内部 BeanPostProcessor？
 		sortPostProcessors(internalPostProcessors, beanFactory);
 		registerBeanPostProcessors(beanFactory, internalPostProcessors);
 
 		// Re-register post-processor for detecting inner beans as ApplicationListeners,
 		// moving it to the end of the processor chain (for picking up proxies etc).
+		// TODO 这个实例什么时候被调用？
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(applicationContext));
 	}
 
@@ -322,6 +340,9 @@ final class PostProcessorRegistrationDelegate {
 		new MergedBeanDefinitionPostProcessorInvoker(beanFactory).invokeMergedBeanDefinitionPostProcessors();
 	}
 
+	/**
+	 * 对 PostProcessors(BeanFactoryPostProcessor、BeanPostProcessor)进行排序
+	 */
 	private static void sortPostProcessors(List<?> postProcessors, ConfigurableListableBeanFactory beanFactory) {
 		// Nothing to sort?
 		if (postProcessors.size() <= 1) {
@@ -366,6 +387,7 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 	/**
+	 * 调用 BeanFactoryPostProcessors 后置处理器。
 	 * Register the given BeanPostProcessor beans.
 	 */
 	private static void registerBeanPostProcessors(
@@ -408,11 +430,23 @@ final class PostProcessorRegistrationDelegate {
 
 		@Override
 		public Object postProcessBeforeInitialization(Object bean, String beanName) {
+			Printers.printf(".. %s#%s(%s, %s)%n%n",
+					getClass().getSimpleName(),
+					"postProcessBeforeInitialization",
+					bean.getClass().getSimpleName(),
+					beanName);
+
 			return bean;
 		}
 
 		@Override
 		public Object postProcessAfterInitialization(Object bean, String beanName) {
+			Printers.printf(".. %s#%s(%s, %s)%n%n",
+					getClass().getSimpleName(),
+					"postProcessAfterInitialization",
+					bean.getClass().getSimpleName(),
+					beanName);
+
 			if (!(bean instanceof BeanPostProcessor) && !isInfrastructureBean(beanName) &&
 					this.beanFactory.getBeanPostProcessorCount() < this.beanPostProcessorTargetCount) {
 				if (logger.isWarnEnabled()) {

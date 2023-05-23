@@ -1,0 +1,71 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **XML 读取涉及的相关类及继承关系**
+header D瓜哥 · ""https://www.diguage.com""
+
+abstract class AbstractApplicationContext extends DefaultResourceLoader implements ConfigurableApplicationContext
+
+abstract class AbstractRefreshableApplicationContext extends AbstractApplicationContext {
+  # {abstract} void loadBeanDefinitions(DefaultListableBeanFactory beanFactory)
+}
+
+abstract class AbstractRefreshableConfigApplicationContext extends AbstractRefreshableApplicationContext
+
+abstract class AbstractXmlApplicationContext extends AbstractRefreshableConfigApplicationContext {
+  # void loadBeanDefinitions(DefaultListableBeanFactory beanFactory)
+  # void loadBeanDefinitions(XmlBeanDefinitionReader reader)
+}
+
+interface BeanDefinitionReader {
+  + {abstract} int loadBeanDefinitions(Resource resource)
+  + {abstract} int loadBeanDefinitions(Resource... resources)
+  + {abstract} int loadBeanDefinitions(String location)
+  + {abstract} int loadBeanDefinitions(String... locations)
+}
+
+abstract class AbstractBeanDefinitionReader implements BeanDefinitionReader {
+  + int loadBeanDefinitions(Resource resource)
+  + int loadBeanDefinitions(Resource... resources)
+  + int loadBeanDefinitions(String location)
+  + int loadBeanDefinitions(String... locations)
+  + int loadBeanDefinitions(String location, @Nullable Set<Resource> actualResources)
+}
+
+class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
+  + int loadBeanDefinitions(Resource resource)
+  # int doLoadBeanDefinitions(InputSource inputSource, Resource resource)
+}
+
+AbstractXmlApplicationContext o-right-> XmlBeanDefinitionReader : 调用
+
+interface BeanDefinitionDocumentReader {
+  + {abstract} void registerBeanDefinitions(Document doc, XmlReaderContext readerContext)
+}
+
+class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocumentReader {
+  # void doRegisterBeanDefinitions(Element root)
+  # void preProcessXml(Element root)
+  # void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate)
+  # void postProcessXml(Element root)
+  - void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate)
+  # void importBeanDefinitionResource(Element ele)
+  # void processAliasRegistration(Element ele)
+  # void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate)
+}
+
+XmlBeanDefinitionReader o-right-> DefaultBeanDefinitionDocumentReader : 调用
+
+class BeanDefinitionParserDelegate {
+  + boolean isDefaultNamespace(Node node)
+  + boolean nodeNameEquals(Node node, String desiredName)
+  + BeanDefinitionHolder parseBeanDefinitionElement(Element ele)
+  + BeanDefinition parseCustomElement(Element ele)
+}
+note bottom of BeanDefinitionParserDelegate: XML 的解析在这里完成
+
+DefaultBeanDefinitionDocumentReader o-right-> BeanDefinitionParserDelegate : 调用
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

@@ -21,6 +21,15 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.util.ResourceUtils;
 
 /**
+ *
+ * 定义 Resource 定义资源加载策略，目前有比较重要的实现有：
+ * <ul>
+ *     <li>DefaultResourceLoader</li>
+ *     <li>FileSystemResourceLoader</li>
+ * </ul>
+ *
+ * ResourceLoader每次只能根据资源路径返回确定的单个Resource实例。
+ * 
  * Strategy interface for loading resources (for example, class path or file system
  * resources). An {@link org.springframework.context.ApplicationContext}
  * is required to provide this functionality plus extended

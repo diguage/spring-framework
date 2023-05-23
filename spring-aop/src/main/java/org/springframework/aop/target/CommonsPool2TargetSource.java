@@ -27,6 +27,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 /**
+ * 使用 Apache Commons Pool 2 来提供对象池的支持。
+ *
  * {@link org.springframework.aop.TargetSource} implementation that holds
  * objects in a configurable Apache Commons2 Pool.
  *

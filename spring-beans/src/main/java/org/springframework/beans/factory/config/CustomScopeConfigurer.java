@@ -19,6 +19,8 @@ package org.springframework.beans.factory.config;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.diguage.labs.Printers;
+
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanUtils;
@@ -95,6 +97,11 @@ public class CustomScopeConfigurer implements BeanFactoryPostProcessor, BeanClas
 
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		Printers.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		if (this.scopes != null) {
 			this.scopes.forEach((scopeKey, value) -> {
 				if (value instanceof Scope scope) {

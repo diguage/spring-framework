@@ -1,0 +1,21 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **ProxyFactory 的"兄弟"**
+
+
+interface Advised extends TargetClassAware
+
+class AdvisedSupport extends ProxyConfig implements Advised
+
+class ProxyCreatorSupport extends AdvisedSupport
+
+class ProxyFactory extends ProxyCreatorSupport
+
+class ProxyFactoryBean extends ProxyCreatorSupport implements FactoryBean
+
+class AspectJProxyFactory extends ProxyCreatorSupport
+
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

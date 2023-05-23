@@ -1,0 +1,6 @@
+= 编程随想
+
+== 2024-06-06
+
+. `EventListenerMethodProcessor` 和 `DefaultEventListenerFactory` 是干嘛的？在 `AnnotationConfigUtils.registerAnnotationConfigProcessors` 方法中，注册了这两个类。
+. `@Order` 和 `Ordered` 在 Spring 内部处理时，有什么差别？各自又适用在什么场景下？

@@ -1,0 +1,32 @@
+@startuml
+header D瓜哥 · ""https://www.diguage.com""
+
+title **AopProxy 相关结构图**
+
+interface AopProxy {
+    + getProxy(): Object
+    + getProxy(classLoader: ClassLoader): Object
+}
+
+class CglibAopProxy implements AopProxy
+class ObjenesisCglibAopProxy extends CglibAopProxy
+
+interface AopProxyFactory {
+    createAopProxy(config: AdvisedSupport): AopProxy
+}
+
+AopProxyFactory o-right-> AopProxy :create
+
+class AdvisedSupport extends ProxyConfig
+
+AopProxyFactory .up.> AdvisedSupport :according to
+
+class DefaultAopProxyFactory implements AopProxyFactory
+
+class JdkDynamicAopProxy implements AopProxy
+
+interface InvocationHandler
+JdkDynamicAopProxy ..|> InvocationHandler
+
+footer D瓜哥 · ""https://www.diguage.com"" · 出品
+@enduml

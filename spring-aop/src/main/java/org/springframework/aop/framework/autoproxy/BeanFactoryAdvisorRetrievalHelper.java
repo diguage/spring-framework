@@ -57,6 +57,7 @@ public class BeanFactoryAdvisorRetrievalHelper {
 	}
 
 
+  // tag::findAdvisorBeans[]
 	/**
 	 * Find all eligible Advisor beans in the current bean factory,
 	 * ignoring FactoryBeans and excluding beans that are currently in creation.
@@ -69,6 +70,8 @@ public class BeanFactoryAdvisorRetrievalHelper {
 		if (advisorNames == null) {
 			// Do not initialize FactoryBeans here: We need to leave all regular beans
 			// uninitialized to let the auto-proxy creator apply to them!
+			// 在 beanNamesForTypeIncludingAncestors 方法中，通过遍历所有 Bean 名称来选取合适的对对象，
+			// 查找的是通过 XML 配置的 <aop:advisor/> Bean。并不会把 @Aspect 标注的类给选出来。
 			advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 					this.beanFactory, Advisor.class, true, false);
 			this.cachedAdvisorBeanNames = advisorNames;
@@ -110,6 +113,7 @@ public class BeanFactoryAdvisorRetrievalHelper {
 		}
 		return advisors;
 	}
+  // end::findAdvisorBeans[]
 
 	/**
 	 * Determine whether the aspect bean with the given name is eligible.
