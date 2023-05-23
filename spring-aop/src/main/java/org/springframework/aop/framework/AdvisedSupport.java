@@ -500,6 +500,8 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 		}
 
 		// Method-specific cache for method-specific pointcuts
+		// 创建以方法为单位的缓存key
+		// 获取目标类中指定方法的MethodInterceptor集合，该集合是由Advisor转换而来
 		return this.methodCache.computeIfAbsent(new MethodCacheKey(method), k ->
 				this.advisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(this, method, targetClass));
 	}

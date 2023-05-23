@@ -98,6 +98,11 @@ public class EventListenerMethodProcessor
 
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+		System.out.printf(". %s#%s(%s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeanFactory",
+				beanFactory.getClass().getSimpleName());
+
 		this.beanFactory = beanFactory;
 		this.originalEvaluationContext.setBeanResolver(new BeanFactoryResolver(this.beanFactory));
 

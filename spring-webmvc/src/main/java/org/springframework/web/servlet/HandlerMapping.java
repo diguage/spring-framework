@@ -22,6 +22,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.lang.Nullable;
 
 /**
+ * HanlerMapping 是 SpringMVC 中 完 成 url 到 Controller 映 射 的 组 件 。
+ * DispatcherServlet 接 收 Request, 然 后 从 HandlerMapping 查 找 处 理 Request 的 Controller。<p/>
+ *
  * Interface to be implemented by objects that define a mapping between
  * requests and handler objects.
  *

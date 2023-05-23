@@ -1,0 +1,14 @@
+[#tools]
+[appendix]
+= 常用工具
+
+. https://asciiflow.com/[ASCII diagrams--ASCIIFlow] -- 画 Ascii diagrams 图。画完
+后，通过 `asciidoctor-diagram` 的 `ditaaa` 转换成图片。
+
+== Asciidoctor Diagram
+
+== Plant UML
+
+. https://plantuml.com/zh/commons[通用命令^]
+. https://plantuml.com/zh/skinparam[Skinparam 命令^]
+. https://plantuml.com/zh/creole[Creole 标记语言^]
