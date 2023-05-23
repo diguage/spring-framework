@@ -32,6 +32,10 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.StringValueResolver;
 
 /**
+ * 这个类说起来相当复杂
+ * 要从他的父类BeanPostProcessor说起，可以先查看他的父类，
+ * 看完父类之后再来下面的注释
+ *
  * {@link BeanPostProcessor} implementation that supplies the {@code ApplicationContext},
  * {@link org.springframework.core.env.Environment Environment}, or
  * {@link StringValueResolver} for the {@code ApplicationContext} to beans that
@@ -74,9 +78,17 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 	}
 
 
+	/**
+	 * 接口 BeanPostProcessor 规定的方法，会在 Bean 创建时实例化后，初始化前，对 Bean 对象应用该 Before 方法
+	 */
 	@Override
 	@Nullable
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		System.out.printf(".. %s#%s(%s, %s)%n%n",
+				getClass().getSimpleName(),
+				"postProcessBeforeInitialization",
+				bean.getClass().getSimpleName(),
+				beanName);
 		if (!(bean instanceof EnvironmentAware || bean instanceof EmbeddedValueResolverAware ||
 				bean instanceof ResourceLoaderAware || bean instanceof ApplicationEventPublisherAware ||
 				bean instanceof MessageSourceAware || bean instanceof ApplicationContextAware ||
@@ -84,30 +96,49 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 			return bean;
 		}
 
+		// 检测 Bean 是否实现了某个 Aware接口，有的话进行相关的调用
 		invokeAwareInterfaces(bean);
 		return bean;
 	}
 
+	/**
+	 * 对实现 Aware 接口的实现进行方法的调用
+	 */
 	private void invokeAwareInterfaces(Object bean) {
 		if (bean instanceof Aware) {
+			// 判断 bean 类型是否为 EnvironmentAware
 			if (bean instanceof EnvironmentAware environmentAware) {
+				// 回调 EnvironmentAware 的 setEnvironment 方法
 				environmentAware.setEnvironment(this.applicationContext.getEnvironment());
 			}
+			// 判断 bean 类型是否为 EmbeddedValueResolverAware
 			if (bean instanceof EmbeddedValueResolverAware embeddedValueResolverAware) {
+				// 回调 EmbeddedValueResolverAware 的 setEmbeddedValueResolver 方法
 				embeddedValueResolverAware.setEmbeddedValueResolver(this.embeddedValueResolver);
 			}
+			// 判断 bean 类型是否为 ResourceLoaderAware
 			if (bean instanceof ResourceLoaderAware resourceLoaderAware) {
+				// 回调 ResourceLoaderAware 的 setResourceLoader 方法
 				resourceLoaderAware.setResourceLoader(this.applicationContext);
 			}
+			// 判断 bean 类型是否为 ApplicationEventPublisherAware 方法
 			if (bean instanceof ApplicationEventPublisherAware applicationEventPublisherAware) {
+				// 回调 ApplicationEventPublisherAware 的setApplicationEventPublisher
 				applicationEventPublisherAware.setApplicationEventPublisher(this.applicationContext);
 			}
+			// 判断 bean 类型是否为 MessageSourceAware
 			if (bean instanceof MessageSourceAware messageSourceAware) {
+				// 回调 MessageSourceAware 的 setMessageSource 方法
 				messageSourceAware.setMessageSource(this.applicationContext);
 			}
+			// 判断 bean 类型是否 ApplicationContextAware
 			if (bean instanceof ApplicationStartupAware applicationStartupAware) {
+				// 回调 ApplicationContextAware 的 setApplicationContext 方法
 				applicationStartupAware.setApplicationStartup(this.applicationContext.getApplicationStartup());
 			}
+			//spring帮你set一个applicationContext对象
+			//所以当我们自己的一个对象实现了ApplicationContextAware对象只需要提供setter就能得到applicationContext对象
+			//此处应该有鲜花。。。。
 			if (bean instanceof ApplicationContextAware applicationContextAware) {
 				applicationContextAware.setApplicationContext(this.applicationContext);
 			}

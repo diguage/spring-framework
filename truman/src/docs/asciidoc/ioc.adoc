@@ -1,0 +1,163 @@
+[#ioc]
+= IoC 的实现原理
+
+TODO: 感觉可以通过向 `ClassPathScanningCandidateComponentProvider` 中添加过滤注解来实现扩展功能。抽空尝试一下。
+
+TODO： 除了 singleton 和 prototype 外，其他 Scope 类型的 Bean 实例是怎么缓存的？
+
+TODO： `default-autowire="byName"` 等实现自动装配的功能在哪里实现的？怎么实现的？是否会遍历 Bean 的所有属性？ `org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean` 中有相关类似实现。
+
+autowiring 的实现过程：
+
+. 对 Bean 的属性代调用 getBean()方法，完成依赖 Bean 的初始化和依赖注入。
+. 将依赖 Bean 的属性引用设置到被依赖的 Bean 属性上。
+. 将依赖 Bean 的名称和被依赖 Bean 的名称存储在 IOC 容器的集合中。
+
+对属性的注入过程分以下两种情况：
+
+. 属性值类型不需要强制转换时，不需要解析属性值，直接准备进行依赖注入。
+. 属性值需要进行类型强制转换时，如对其他对象的引用等，首先需要解析属性值，然后对解析后的属性值进行依赖注入。
+
+
+Spring IoC 容器是如何将属性的值注入到 Bean 实例对象中去的：
+
+. 对于集合类型的属性，将其属性值解析为目标类型的集合后直接赋值给属性。
+. 对于非集合类型的属性，大量使用了 JDK 的反射机制，通过属性的 Getter 方法获取指定属性注入以前的值，同时调用属性的 Setter 方法为属性设置注入后的值。
+
+从 `ConfigurationClassBeanDefinitionReader.loadBeanDefinitionsForBeanMethod` 可以看出，对 `@Bean` 的处理复用了自定义 `factory-method` 的处理。在 `spring-beans.xsd` 文件中，可以找到对 `factory-method` 属性的说明。
+
+include::{includedir}/bean-definition.adoc[leveloffset=+1]
+
+include::{includedir}/bean-factory.adoc[leveloffset=+1]
+
+include::{includedir}/factory-bean.adoc[leveloffset=+1]
+
+include::{includedir}/environment.adoc[leveloffset=+1]
+
+include::{includedir}/application-context.adoc[leveloffset=+1]
+
+include::{includedir}/startup-process-overview.adoc[leveloffset=+1]
+
+include::{includedir}/bean-lifecycle-overview.adoc[leveloffset=+1]
+
+include::{includedir}/extensions-overview.adoc[leveloffset=+1]
+
+include::{includedir}/circular-dependence.adoc[leveloffset=+1]
+
+== I18n
+
+properties 文件内容是以 ISO-8859-1 编码的。所以，不支持中文，需要把中文进行转码。
+
+plantuml::{includedir}/puml/MessageSource.puml[{diagram_attr}]
+
+== 事件发布
+
+plantuml::{includedir}/puml/ApplicationEvent.puml[{diagram_attr}]
+
+容器启动伊始，就会检查容器内是否存在名称为 `applicationEventMulticaster` 的 `ApplicationEventMulticaster` 对象实例。有的话就使用提供的实现，没有则默认初始化一个 `SimpleApplicationEventMulticaster` 作为将会使用的 `ApplicationEventMulticaster`。
+
+在 `refresh()` 时，先调用 `initMessageSource()` 初始化 `MessageSource` 实例；然后调用 `initApplicationEventMulticaster()` 初始化 `ApplicationEventMulticaster`。
+
+Spring 是以 Bean 为核心的。Bean 的配置、配置的读取和解析、以合适的数据结构对 Bean 元数据进行各种操作等。
+
+Spring 是如何解决构造函数依赖的呢？以及如何注入呢？
+
+== 内置 `PostProcessor` 的注册
+
+在 `AnnotationConfigUtils.registerAnnotationConfigProcessors(BeanDefinitionRegistry)` 方法中，注册了 Spring 内置的一些核心 `PostProcessor`：
+
+. `ConfigurationClassPostProcessor`
+. `AutowiredAnnotationBeanPostProcessor`
+. `CommonAnnotationBeanPostProcessor`
+. `PersistenceAnnotationBeanPostProcessor`？ -- 这个得看是否需要
+. `EventListenerMethodProcessor`
+. `DefaultEventListenerFactory`
+
+通过对 `AnnotationConfigUtils.registerAnnotationConfigProcessors` 调用追踪来看，在如下地方进行了调用：
+
+. 通过 `AnnotationConfigBeanDefinitionParser.parse` 在处理 `<context:annotation-config/>` 时；
+. 通过 `ComponentScanBeanDefinitionParser.parse` 在处理 `<context:component-scan/>` 时；
+. 通过 `AnnotatedBeanDefinitionReader` 构造函数在初始化时；
+. 通过 `ClassPathBeanDefinitionScanner.scan` 在扫描类路径时；
+
+覆盖了 XML 配置文件和注解配置两种最核心的场景。
+
+
+plantuml::{includedir}/puml/BeanDefinition.puml[{diagram_attr}]
+
+[#uml-BeanFactory]
+plantuml::{includedir}/puml/BeanFactory.puml[{diagram_attr}]
+
+plantuml::{includedir}/puml/ConfigurationClassPostProcessor.puml[{diagram_attr}]
+
+include::{includedir}/common-interfaces-introduction.adoc[leveloffset=+1]
+
+include::{includedir}/resource.adoc[leveloffset=+1]
+
+include::{includedir}/tag-resolve.adoc[leveloffset=+1]
+
+include::{includedir}/annotations-resolve.adoc[leveloffset=+1]
+
+可以使用 p-namespace 来简化属性的赋值操作：
+
+[{xml_src_attr}]
+----
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:p="http://www.springframework.org/schema/p"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+                https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean name="classic" class="com.example.ExampleBean">
+		<property name="email" value="someone@somewhere.com"/>
+	</bean>
+
+	<bean name="p-namespace" class="com.example.ExampleBean"
+		  p:email="someone@somewhere.com"/>
+</beans>
+----
+
+可以使用 c-namespace 来简化构造函数参数的声明：
+
+[{xml_src_attr}]
+----
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:c="http://www.springframework.org/schema/c"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+                https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean id="beanTwo" class="x.y.ThingTwo"/>
+	<bean id="beanThree" class="x.y.ThingThree"/>
+
+	<!-- traditional declaration with optional argument names -->
+	<bean id="beanOne" class="x.y.ThingOne">
+		<constructor-arg name="thingTwo" ref="beanTwo"/>
+		<constructor-arg name="thingThree" ref="beanThree"/>
+		<constructor-arg name="email" value="something@somewhere.com"/>
+	</bean>
+
+	<!-- c-namespace declaration with argument names -->
+	<bean id="beanOne" class="x.y.ThingOne" c:thingTwo-ref="beanTwo"
+		  c:thingThree-ref="beanThree" c:email="something@somewhere.com"/>
+
+</beans>
+----
+
+除了常规的 `@Autowired` 和 `@Resource` 注入外，还可以使用 `@Lookup` 注解来注入依赖。示例如下：
+
+[{java_src_attr}]
+----
+include::{truman_src_dir}/context/AnnoLookupTest.java[]
+----
+
+这里有个疑问：为什么要把 `@Lookup` 注解标注在抽象方法上？
+
+== `BeanNameGenerator` 自定义 Bean 名称
+
+如果想自定义 Bean 名称，可以实现 `BeanNameGenerator` 接口，然后将其配置到 Spring 容器上。更详细文档，请看： https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#beans-scanning-name-generator[Core Technologies：Naming Autodetected Components^]。
+
+
+include::{includedir}/property-placeholder.adoc[leveloffset=+1]

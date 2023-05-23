@@ -27,6 +27,10 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.core.NamedThreadLocal;
 
 /**
+ * 为不同线程调用提供不同的目标对象。
+ * 保证各自线程上对目标对象的调用，可以被分配到当前线程对应的那个目标对象实例上。
+ * 注意： scope 要设置成 prototype。
+ *
  * Alternative to an object pool. This {@link org.springframework.aop.TargetSource}
  * uses a threading model in which every thread has its own copy of the target.
  * There's no contention for targets. Target object creation is kept to a minimum

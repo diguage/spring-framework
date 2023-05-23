@@ -1,0 +1,9 @@
+[#xml]
+[appendix]
+= XML 扩展标记语言
+
+include::{includedir}/xml.adoc[leveloffset=+1]
+
+include::{includedir}/xml-dtd.adoc[leveloffset=+1]
+
+include::{includedir}/xml-schema.adoc[leveloffset=+1]

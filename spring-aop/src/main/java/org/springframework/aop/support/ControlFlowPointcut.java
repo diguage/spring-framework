@@ -28,6 +28,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
+ * 在某个类调动时拦截，其他类调用时不调用。每次运行都需要做检查，性能差，慎重选择。<p>
+ *
  * Pointcut and method matcher for use in simple <b>cflow</b>-style pointcut.
  * Note that evaluating such pointcuts is 10-15 times slower than evaluating
  * normal pointcuts, but they are useful in some cases.
